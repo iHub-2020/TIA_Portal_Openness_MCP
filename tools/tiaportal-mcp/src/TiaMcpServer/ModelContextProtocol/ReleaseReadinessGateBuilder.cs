@@ -9,7 +9,7 @@ namespace TiaMcpServer.ModelContextProtocol
     /// 商用就绪门禁构建器。
     /// 用于把离线验收套件、诊断报告、运行手册和发布清单汇总成一份可交付、可审计的缺口报告。
     /// </summary>
-    public static class CommercialReadinessGateBuilder
+    public static class ReleaseReadinessGateBuilder
     {
         public static JsonObject Build(JsonObject suiteRoot, JsonObject diagnostics, JsonObject runbook, JsonObject manifest)
         {
@@ -60,10 +60,10 @@ namespace TiaMcpServer.ModelContextProtocol
 
             return new JsonObject
             {
-                ["format"] = "tia-mcp-commercial-readiness-gate-v1",
+                ["format"] = "tia-mcp-release-readiness-gate-v1",
                 ["timestamp"] = DateTime.Now.ToString("O"),
                 ["offlineOnly"] = true,
-                ["commercialReady"] = gaps.Count == 0 && manifest["commercialReady"]?.GetValue<bool>() == true,
+                ["releaseReady"] = gaps.Count == 0 && manifest["releaseReady"]?.GetValue<bool>() == true,
                 ["gateCount"] = gates.Count,
                 ["passedGateCount"] = gates.OfType<JsonObject>().Count(x => x["passed"]?.GetValue<bool>() == true),
                 ["failedGateCount"] = gaps.Count,
@@ -77,13 +77,13 @@ namespace TiaMcpServer.ModelContextProtocol
         public static string BuildMarkdown(JsonObject gateReport, string jsonPath)
         {
             var md = new StringBuilder();
-            md.AppendLine("# TIA MCP Commercial Readiness Gate");
+            md.AppendLine("# TIA MCP Release Readiness Gate");
             md.AppendLine();
             md.AppendLine("Generated: " + gateReport["timestamp"]);
             md.AppendLine("JSON: " + jsonPath);
             md.AppendLine();
             md.AppendLine("## Summary");
-            md.AppendLine("- Commercial ready: " + gateReport["commercialReady"]);
+            md.AppendLine("- Release ready: " + gateReport["releaseReady"]);
             md.AppendLine("- Gates: " + gateReport["gateCount"]);
             md.AppendLine("- Passed: " + gateReport["passedGateCount"]);
             md.AppendLine("- Failed: " + gateReport["failedGateCount"]);

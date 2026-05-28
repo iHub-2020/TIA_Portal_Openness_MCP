@@ -3085,7 +3085,7 @@ namespace TiaMcpServer
             LogDiag(root["diagnosticMarkdownPath"]?.ToString() ?? reportDir);
             LogDiag(root["runbookMarkdownPath"]?.ToString() ?? reportDir);
             LogDiag(root["manifestMarkdownPath"]?.ToString() ?? reportDir);
-            LogDiag(root["commercialReadinessGateMarkdownPath"]?.ToString() ?? reportDir);
+            LogDiag(root["releaseReadinessGateMarkdownPath"]?.ToString() ?? reportDir);
             LogDiag("OK: " + root["ok"]);
         }
 
@@ -3119,9 +3119,9 @@ namespace TiaMcpServer
             LogDiag(root["diagnosticMarkdownPath"]?.ToString() ?? reportDir);
             LogDiag(root["runbookMarkdownPath"]?.ToString() ?? reportDir);
             LogDiag(root["manifestMarkdownPath"]?.ToString() ?? reportDir);
-            LogDiag(root["commercialReadinessGateMarkdownPath"]?.ToString() ?? reportDir);
+            LogDiag(root["releaseReadinessGateMarkdownPath"]?.ToString() ?? reportDir);
             LogDiag("OK: " + root["ok"]);
-            LogDiag("CommercialReady: " + root["commercialReady"]);
+            LogDiag("ReleaseReady: " + root["releaseReady"]);
         }
 
         private static void RunHmiTemplatePlcSyncPrecheckSuite(CliOptions options)
@@ -5349,7 +5349,7 @@ namespace TiaMcpServer
                 md.AppendLine();
             }
 
-            md.AppendLine("## Commercialization Gate");
+            md.AppendLine("## Release Readiness Gate");
             md.AppendLine("- `mapping-ready` only means every required tag has an exact or high-confidence candidate; it is still not applied automatically.");
             md.AppendLine("- Before real application, generate an explicit mapping file, run sync precheck with full-symbol matches, then run temporary-project binding validation.");
             md.AppendLine("- Low-confidence or type-mismatch candidates must be corrected by a human or deterministic project rule.");
@@ -7501,7 +7501,7 @@ END_DATA_BLOCK
                               " | " + errs + " |");
             }
             md.AppendLine();
-            md.AppendLine("## Commercialization Gate");
+            md.AppendLine("## Release Readiness Gate");
             md.AppendLine("- A template is reusable only after it has explicit mapping, PLC symbol precheck, HMI tag creation, screen apply, dynamization binding, event binding, and readback evidence.");
             md.AppendLine("- Templates listed as skipped still need mapping rules or manual mapping before delivery-package synchronization.");
 

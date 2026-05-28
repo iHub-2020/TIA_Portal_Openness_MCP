@@ -92,8 +92,8 @@ namespace TiaMcpServer.ModelContextProtocol
             var runbookMdPath = Path.Combine(reportDirectory, "offline_release_runbook_" + stamp + ".md");
             var manifestJsonPath = Path.Combine(reportDirectory, "offline_release_manifest_" + stamp + ".json");
             var manifestMdPath = Path.Combine(reportDirectory, "offline_release_manifest_" + stamp + ".md");
-            var readinessGateJsonPath = Path.Combine(reportDirectory, "offline_commercial_readiness_gate_" + stamp + ".json");
-            var readinessGateMdPath = Path.Combine(reportDirectory, "offline_commercial_readiness_gate_" + stamp + ".md");
+            var readinessGateJsonPath = Path.Combine(reportDirectory, "offline_release_readiness_gate_" + stamp + ".json");
+            var readinessGateMdPath = Path.Combine(reportDirectory, "offline_release_readiness_gate_" + stamp + ".md");
             root["jsonPath"] = jsonPath;
             root["markdownPath"] = mdPath;
             File.WriteAllText(diagJsonPath, diagnostics.ToJsonString(new JsonSerializerOptions
@@ -133,19 +133,19 @@ namespace TiaMcpServer.ModelContextProtocol
             root["manifestJsonPath"] = manifestJsonPath;
             root["manifestMarkdownPath"] = manifestMdPath;
 
-            var readinessGate = manifest["commercialReadinessGate"] as JsonObject
-                ?? CommercialReadinessGateBuilder.Build(root, diagnostics, runbook, manifest);
+            var readinessGate = manifest["releaseReadinessGate"] as JsonObject
+                ?? ReleaseReadinessGateBuilder.Build(root, diagnostics, runbook, manifest);
             File.WriteAllText(readinessGateJsonPath, readinessGate.ToJsonString(new JsonSerializerOptions
             {
                 WriteIndented = true,
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             }), Encoding.UTF8);
-            File.WriteAllText(readinessGateMdPath, CommercialReadinessGateBuilder.BuildMarkdown(readinessGate, readinessGateJsonPath), Encoding.UTF8);
+            File.WriteAllText(readinessGateMdPath, ReleaseReadinessGateBuilder.BuildMarkdown(readinessGate, readinessGateJsonPath), Encoding.UTF8);
             readinessGate["jsonPath"] = readinessGateJsonPath;
             readinessGate["markdownPath"] = readinessGateMdPath;
-            root["commercialReadinessGate"] = readinessGate.DeepClone();
-            root["commercialReadinessGateJsonPath"] = readinessGateJsonPath;
-            root["commercialReadinessGateMarkdownPath"] = readinessGateMdPath;
+            root["releaseReadinessGate"] = readinessGate.DeepClone();
+            root["releaseReadinessGateJsonPath"] = readinessGateJsonPath;
+            root["releaseReadinessGateMarkdownPath"] = readinessGateMdPath;
 
             File.WriteAllText(jsonPath, root.ToJsonString(new JsonSerializerOptions
             {

@@ -25,13 +25,13 @@ namespace TiaMcpServer.ModelContextProtocol
 
             var manifest = new JsonObject
             {
-                ["format"] = "tia-mcp-commercial-release-manifest-v1",
+                ["format"] = "tia-mcp-release-manifest-v1",
                 ["timestamp"] = DateTime.Now.ToString("O"),
                 ["suiteOk"] = suiteOk,
-                ["commercialReady"] = suiteOk && noFailedItems && !hasKnownBlocks,
-                ["commercialReadinessReason"] = suiteOk && noFailedItems && !hasKnownBlocks
+                ["releaseReady"] = suiteOk && noFailedItems && !hasKnownBlocks,
+                ["releaseReadinessReason"] = suiteOk && noFailedItems && !hasKnownBlocks
                     ? "All release gates are green and no known blocking signals remain."
-                    : "Offline gates are usable, but known blocking signals remain; do not claim final commercial readiness until they are closed and temporary TIA project validation passes.",
+                    : "Offline gates are usable, but known blocking signals remain; do not claim final release readiness until they are closed and temporary TIA project validation passes.",
                 ["workspaceRoot"] = suiteRoot["workspaceRoot"]?.ToString() ?? "",
                 ["reports"] = new JsonObject
                 {
@@ -67,7 +67,7 @@ namespace TiaMcpServer.ModelContextProtocol
                 ["ok"] = true
             };
 
-            manifest["commercialReadinessGate"] = CommercialReadinessGateBuilder.Build(suiteRoot, diagnostics, runbook, manifest);
+            manifest["releaseReadinessGate"] = ReleaseReadinessGateBuilder.Build(suiteRoot, diagnostics, runbook, manifest);
             return manifest;
         }
 
@@ -81,9 +81,9 @@ namespace TiaMcpServer.ModelContextProtocol
             md.AppendLine();
             md.AppendLine("## Readiness");
             md.AppendLine("- Suite OK: " + manifest["suiteOk"]);
-            md.AppendLine("- Commercial ready: " + manifest["commercialReady"]);
-            md.AppendLine("- Reason: " + manifest["commercialReadinessReason"]);
-            if (manifest["commercialReadinessGate"] is JsonObject gate)
+            md.AppendLine("- Release ready: " + manifest["releaseReady"]);
+            md.AppendLine("- Reason: " + manifest["releaseReadinessReason"]);
+            if (manifest["releaseReadinessGate"] is JsonObject gate)
             {
                 md.AppendLine("- Readiness gate failed: " + gate["failedGateCount"]);
             }
@@ -111,8 +111,8 @@ namespace TiaMcpServer.ModelContextProtocol
                 md.AppendLine("- " + block["id"] + ": " + block["status"] + " - " + block["detail"]);
             }
             md.AppendLine();
-            md.AppendLine("## Commercial Readiness Gaps");
-            var gaps = manifest["commercialReadinessGate"]?["gaps"] as JsonArray ?? new JsonArray();
+            md.AppendLine("## Release Readiness Gaps");
+            var gaps = manifest["releaseReadinessGate"]?["gaps"] as JsonArray ?? new JsonArray();
             if (gaps.Count == 0)
                 md.AppendLine("- None.");
             foreach (var node in gaps)

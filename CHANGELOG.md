@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.0.33] - 2026-05-28
+
+### 去除内部"商业"措辞（发布质检工具）
+
+- 发布质检的 `CommercialReadinessGateBuilder` → `ReleaseReadinessGateBuilder`（文件同步改名）；`Commercial(ization) Readiness Gate` → `Release Readiness Gate`；JSON 键 `commercialReadinessGate`/`commercialReady`/`commercialReadinessReason` → `release*`。涉及 `OfflineReleaseValidationSuite`/`ReleaseHandoffArtifactBuilder`/`ReleaseManifestBuilder`/`Program.cs`，读写成对改名，数据流与行为不变。
+- README 删除已过时的"商业锁"说明（自 0.0.32 起已无任何授权代码）。
+- 保留少量工具描述里的 "commercial"（指生产/商用用途，非授权语义）。
+- 重建 V20/V21 exe（0.0.33，0 错误）。
+
 ## [0.0.32] - 2026-05-28
 
 ### 移除商业授权脚手架（全开源）

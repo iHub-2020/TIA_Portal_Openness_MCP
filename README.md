@@ -1,10 +1,10 @@
-# TIA Portal MCP 完整交付包（**v0.0.32** / V20+V21 + S7DCL）
+# TIA Portal MCP 完整交付包（**v0.0.33** / V20+V21 + S7DCL）
 
 [English](README.en.md) · **中文**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/bulaofen0036-coder/TIA_Portal_Openness_MCP)](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/releases) [![validate-bundle](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/actions/workflows/validate.yml/badge.svg)](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/actions/workflows/validate.yml)
 
-> **免费开源（MIT）**：服务器**无需任何 license key** 即可运行。商业锁是可选项，仅当所有者放入 `commercial.lock` 时才生效——公开版本不含该文件。
+> **免费开源（MIT）**：服务器**无需任何 license key** 即可运行，**不含任何授权校验代码**。
 
 ![架构图](docs/assets/architecture.svg)
 

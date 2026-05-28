@@ -1,12 +1,11 @@
-# TIA Portal MCP Server (v0.0.32 · V20 + V21 · S7DCL)
+# TIA Portal MCP Server (v0.0.33 · V20 + V21 · S7DCL)
 
 **English** · [中文](README.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/bulaofen0036-coder/TIA_Portal_Openness_MCP)](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/releases) [![validate-bundle](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/actions/workflows/validate.yml/badge.svg)](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/actions/workflows/validate.yml)
 
-> **Free & open (MIT).** The server runs with **no license key**. A commercial
-> lock exists only as an opt-in (active solely if the owner ships a
-> `commercial.lock`); the public build ships none.
+> **Free & open (MIT).** The server runs with **no license key** — there is no
+> license-enforcement code at all.
 
 ![Architecture](docs/assets/architecture.svg)
 

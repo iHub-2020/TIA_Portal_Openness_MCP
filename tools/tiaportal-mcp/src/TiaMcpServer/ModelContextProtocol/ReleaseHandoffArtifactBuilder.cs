@@ -55,11 +55,11 @@ namespace TiaMcpServer.ModelContextProtocol
             manifest["jsonPath"] = manifestJsonPath;
             manifest["markdownPath"] = manifestMdPath;
 
-            var readinessGate = manifest["commercialReadinessGate"] as JsonObject
-                ?? CommercialReadinessGateBuilder.Build(suiteRoot, diagnostics, runbook, manifest);
-            var readinessGateJsonPath = Path.Combine(outputDirectory, "rebuilt_commercial_readiness_gate_" + stamp + ".json");
-            var readinessGateMdPath = Path.Combine(outputDirectory, "rebuilt_commercial_readiness_gate_" + stamp + ".md");
-            WriteJsonAndMarkdown(readinessGate, readinessGateJsonPath, readinessGateMdPath, CommercialReadinessGateBuilder.BuildMarkdown);
+            var readinessGate = manifest["releaseReadinessGate"] as JsonObject
+                ?? ReleaseReadinessGateBuilder.Build(suiteRoot, diagnostics, runbook, manifest);
+            var readinessGateJsonPath = Path.Combine(outputDirectory, "rebuilt_release_readiness_gate_" + stamp + ".json");
+            var readinessGateMdPath = Path.Combine(outputDirectory, "rebuilt_release_readiness_gate_" + stamp + ".md");
+            WriteJsonAndMarkdown(readinessGate, readinessGateJsonPath, readinessGateMdPath, ReleaseReadinessGateBuilder.BuildMarkdown);
             readinessGate["jsonPath"] = readinessGateJsonPath;
             readinessGate["markdownPath"] = readinessGateMdPath;
 
@@ -76,9 +76,9 @@ namespace TiaMcpServer.ModelContextProtocol
                 ["runbookJsonPath"] = runbookJsonPath,
                 ["manifestMarkdownPath"] = manifestMdPath,
                 ["manifestJsonPath"] = manifestJsonPath,
-                ["commercialReadinessGateMarkdownPath"] = readinessGateMdPath,
-                ["commercialReadinessGateJsonPath"] = readinessGateJsonPath,
-                ["commercialReady"] = manifest["commercialReady"]?.GetValue<bool>() == true,
+                ["releaseReadinessGateMarkdownPath"] = readinessGateMdPath,
+                ["releaseReadinessGateJsonPath"] = readinessGateJsonPath,
+                ["releaseReady"] = manifest["releaseReady"]?.GetValue<bool>() == true,
                 ["ok"] = true
             };
         }
