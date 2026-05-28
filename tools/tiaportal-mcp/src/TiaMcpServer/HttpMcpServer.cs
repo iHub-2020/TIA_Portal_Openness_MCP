@@ -30,6 +30,10 @@ namespace TiaMcpServer
         private const string SessionHeader = "Mcp-Session-Id";
         private const string ProtocolHeader = "MCP-Protocol-Version";
 
+        // Upper bound on how long a POST waits for the MCP host to produce a matching
+        // response before returning 504, so a stalled pipe can't hang the request forever.
+        private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(30);
+
         private sealed class Session
         {
             public string Id = "";
@@ -158,18 +162,23 @@ namespace TiaMcpServer
                 return;
             }
 
+            // Read the raw body, bounded by Content-Length. Async reads against the
+            // HttpListener input stream can hang, so read synchronously (this handler
+            // already runs on a dedicated task thread) and stop at the declared length.
             string body;
-            using (var sr = new StreamReader(req.InputStream, new UTF8Encoding(false), false, 4096, true))
             {
-                var buf = new char[8192];
-                var sb = new StringBuilder();
+                long declared = req.ContentLength64;
+                var ms = new MemoryStream();
+                var buf = new byte[8192];
+                var input = req.InputStream;
                 int read;
-                while ((read = await sr.ReadAsync(buf, 0, buf.Length).ConfigureAwait(false)) > 0)
+                while ((read = input.Read(buf, 0, buf.Length)) > 0)
                 {
-                    sb.Append(buf, 0, read);
-                    if (sb.Length > MaxBodyBytes) { res.StatusCode = 413; res.Close(); return; }
+                    ms.Write(buf, 0, read);
+                    if (ms.Length > MaxBodyBytes) { res.StatusCode = 413; res.Close(); return; }
+                    if (declared >= 0 && ms.Length >= declared) break;
                 }
-                body = sb.ToString();
+                body = (req.ContentEncoding ?? Encoding.UTF8).GetString(ms.ToArray());
             }
 
             if (string.IsNullOrWhiteSpace(body)) { res.StatusCode = 400; res.Close(); return; }
@@ -201,7 +210,7 @@ namespace TiaMcpServer
             if (isNotification)
             {
                 await requestLock.WaitAsync().ConfigureAwait(false);
-                try { await mcpWriter.WriteLineAsync(body).ConfigureAwait(false); }
+                try { mcpWriter.WriteLine(body); }
                 finally { requestLock.Release(); }
                 res.StatusCode = 202;
                 res.Close();
@@ -211,32 +220,43 @@ namespace TiaMcpServer
             // Forward to MCP and wait for the matching response.
             await requestLock.WaitAsync().ConfigureAwait(false);
             string? responseLine = null;
+            bool timedOut = false;
             try
             {
-                await mcpWriter.WriteLineAsync(body).ConfigureAwait(false);
-                string? expectedId = requestId!.ToJsonString();
+                mcpWriter.WriteLine(body);
+                string expectedId = requestId!.ToJsonString();
 
-                while (true)
+                // ReadLineAsync on a StreamReader wrapping a blocking stream can block the
+                // calling thread synchronously, so race a dedicated read worker against a
+                // wall-clock delay to guarantee a 504 rather than an indefinite hang.
+                var readWork = Task.Run(() =>
                 {
-                    string? line = await mcpReader.ReadLineAsync().ConfigureAwait(false);
-                    if (line == null) break;
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-
-                    try
+                    string? line;
+                    while ((line = mcpReader.ReadLine()) != null)
                     {
-                        var ln = JsonNode.Parse(line);
-                        var lnId = ln?["id"]?.ToJsonString();
-                        bool hasMethod = ln?["method"] != null;
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        try
+                        {
+                            var ln = JsonNode.Parse(line);
+                            var lnId = ln?["id"]?.ToJsonString();
+                            bool hasMethod = ln?["method"] != null;
 
-                        if (lnId == expectedId) { responseLine = line; break; }
-                        // Skip server-initiated notifications (have method, no id).
-                        if (hasMethod && lnId == null) continue;
+                            if (lnId == expectedId) return line;
+                            // Skip server-initiated notifications (have method, no id).
+                            if (hasMethod && lnId == null) continue;
+                        }
+                        catch { /* malformed line — skip */ }
                     }
-                    catch { /* malformed line — skip */ }
-                }
+                    return (string?)null;
+                });
+
+                var done = await Task.WhenAny(readWork, Task.Delay(ResponseTimeout)).ConfigureAwait(false);
+                if (done == readWork) responseLine = await readWork.ConfigureAwait(false);
+                else timedOut = true;
             }
             finally { requestLock.Release(); }
 
+            if (timedOut) { res.StatusCode = 504; res.Close(); return; }
             if (responseLine == null) { res.StatusCode = 500; res.Close(); return; }
 
             if (wantsSse)

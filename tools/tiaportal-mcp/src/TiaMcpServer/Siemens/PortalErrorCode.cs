@@ -7,7 +7,8 @@ namespace TiaMcpServer.Siemens
         ImportFailed,
         InvalidParams,
         InvalidState,
-        OpennessError
+        OpennessError,
+        NotSupportedOnVersion
     }
 }
 

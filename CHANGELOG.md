@@ -1,5 +1,28 @@
 # Change Log
 
+## [0.0.31] - 2026-05-28
+
+### 版本能力层（Capability layer）
+
+- 新增 `Siemens/Capability.cs`：把"某功能在当前连接的 TIA 版本上是否可用"收口为单一真源。`TiaFeature` 枚举（`HardwareHmiConnection` 需 V21+、`DocumentExport` 需 V20+）+ `IsSupported`/`RequireSupported`/`Describe`/`Snapshot`。
+- 新增错误码 `PortalErrorCode.NotSupportedOnVersion`；`Portal.cs` 中 `ExportAsDocuments` 的手写 `<20` 守卫改走 `Capability.RequireSupported(DocumentExport)`；`ProbeCreateHardwareHmiConnection` 的 V20 降级提示改走 `Capability.Describe`（统一文案来源）。
+- `Bootstrap` 响应新增 `Capabilities` 字段：AI 模型一上来就能看到当前版本能干什么，无需靠失败调用试探。**已在 V20/V21 两份 exe 上实测**：V20 上 `HardwareHmiConnection.supported=false`、`DocumentExport.supported=true`；V21 上两者皆 true。
+
+### "Did you mean" 候选提示整合
+
+- 把原先内联在 `ExportBlock` 里的块名候选提示抽成可复用助手 `BuildBlockDidYouMean`，并复活此前为死代码的 `Guard.DidYouMean`。
+- 新增 `BuildTypeDidYouMean` 并应用到 `ExportType` 的 NotFound（此前只返回 "Type not found." 无候选）。
+
+### HTTP transport 修复（此前 POST 完全不可用）
+
+- **根因**：请求体读取与 HTTP↔MCP 内部管道的写入走 APM 包装的异步 I/O，在 .NET Framework `HttpListener` 输入流上会无限挂起，导致每个 `POST /mcp` 永久阻塞（此前只有 `GET /mcp/health` 可用）。
+- **修复**：请求体读取、管道写入改为同步；响应读取改为 `Task.Run` 内同步 `ReadLine` 并与 30s 超时竞速（超时返回 504，不再无限挂起）。
+- **已用 curl 端到端实测**：`initialize`→200+会话、`notifications/initialized`→202、`tools/call Bootstrap`→200 且返回 Capabilities。
+
+### 构建
+
+- V20 + V21 两份 exe 重建，0 错误，`serverVersion=0.0.31`。
+
 ## [0.0.30] - 2026-05-28
 
 ### 修复：V20 导入报「engineering version 'V21' is not supported」

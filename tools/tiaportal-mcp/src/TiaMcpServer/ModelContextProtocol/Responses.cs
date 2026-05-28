@@ -123,6 +123,7 @@ namespace TiaMcpServer.ModelContextProtocol
         public BootstrapToolLayers? ToolLayers { get; set; }
         public string? SkillFile { get; set; }
         public string? ServerVersion { get; set; }
+        public IEnumerable<TiaMcpServer.Siemens.CapabilityInfo>? Capabilities { get; set; }
     }
 
     public class BootstrapEnvironment

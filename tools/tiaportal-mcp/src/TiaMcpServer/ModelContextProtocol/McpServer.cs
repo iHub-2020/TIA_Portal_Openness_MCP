@@ -286,6 +286,7 @@ namespace TiaMcpServer.ModelContextProtocol
                     ToolLayers = layers,
                     SkillFile = "tools/tiaportal-mcp/skill/SKILL.md",
                     ServerVersion = typeof(McpServer).Assembly.GetName().Version?.ToString(),
+                    Capabilities = Capability.Snapshot(),
                     Message = ready ? "TIA Portal MCP ready" : "TIA Portal MCP not ready — see RecommendedNextTool",
                     Meta = new JsonObject
                     {
@@ -843,6 +844,59 @@ namespace TiaMcpServer.ModelContextProtocol
                     return new List<string> { "Capture the native exception details.", "Classify the failure before retrying.", "Prefer a small sacrificial project probe before touching a real project." };
                 default:
                     return new List<string> { "Capture the exact tool, parameters, and native error.", "Run readback diagnostics before retrying.", "Generate an acceptance or environment report if the failure may be machine-specific." };
+            }
+        }
+
+        // Best-effort "Did you mean …?" suffix for a not-found block name. Only fires for a
+        // bare name (no '/'), where a typo is the likely cause. Returns "" on any failure.
+        private static string BuildBlockDidYouMean(string softwarePath, string blockPath)
+        {
+            if (string.IsNullOrEmpty(blockPath) || blockPath.Contains('/')) return string.Empty;
+            try
+            {
+                var escaped = Regex.Escape(blockPath);
+                var blocks = Portal.GetBlocks(softwarePath, $"^{escaped}$");
+                if (blocks == null || blocks.Count == 0)
+                    blocks = Portal.GetBlocks(softwarePath, escaped);
+
+                var candidates = blocks
+                    .Take(10)
+                    .Select(b => Portal.GetBlockPath(b))
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                return Siemens.Guard.DidYouMean(candidates);
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        // Best-effort "Did you mean …?" suffix for a not-found type name. See BuildBlockDidYouMean.
+        private static string BuildTypeDidYouMean(string softwarePath, string typePath)
+        {
+            if (string.IsNullOrEmpty(typePath) || typePath.Contains('/')) return string.Empty;
+            try
+            {
+                var escaped = Regex.Escape(typePath);
+                var types = Portal.GetTypes(softwarePath, $"^{escaped}$");
+                if (types == null || types.Count == 0)
+                    types = Portal.GetTypes(softwarePath, escaped);
+
+                var candidates = types
+                    .Take(10)
+                    .Select(t => t.Name)
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                return Siemens.Guard.DidYouMean(candidates);
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
 
@@ -5662,38 +5716,7 @@ namespace TiaMcpServer.ModelContextProtocol
                 {
                     case TiaMcpServer.Siemens.PortalErrorCode.NotFound:
                         {
-                            var suggestionNote = string.Empty;
-                            // If the path has no '/', it may be incomplete; build suggestions using Portal's regex search and path resolver
-                            if (!string.IsNullOrEmpty(blockPath) && !blockPath.Contains('/'))
-                            {
-                                try
-                                {
-                                    var escaped = Regex.Escape(blockPath);
-                                    var blocks = Portal.GetBlocks(softwarePath, $"^{escaped}$");
-                                    if (blocks == null || blocks.Count == 0)
-                                    {
-                                        blocks = Portal.GetBlocks(softwarePath, escaped);
-                                    }
-
-                                    var candidates = blocks
-                                        .Take(10)
-                                        .Select(b => Portal.GetBlockPath(b))
-                                        .Where(p => !string.IsNullOrWhiteSpace(p))
-                                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                                        .ToList();
-
-                                    if (candidates.Count > 0)
-                                    {
-                                        suggestionNote = $" Did you mean: {string.Join(", ", candidates)}?";
-                                    }
-                                }
-                                catch
-                                {
-                                    // Best-effort suggestions only
-                                }
-                            }
-
-                            var msg = $"Block not found.{suggestionNote}".Trim();
+                            var msg = ("Block not found." + BuildBlockDidYouMean(softwarePath, blockPath)).Trim();
                             throw new McpException(msg, McpErrorCode.InvalidParams);
                         }
 
@@ -6578,7 +6601,7 @@ namespace TiaMcpServer.ModelContextProtocol
                 switch (pex.Code)
                 {
                     case TiaMcpServer.Siemens.PortalErrorCode.NotFound:
-                        throw new McpException("Type not found.", McpErrorCode.InvalidParams);
+                        throw new McpException(("Type not found." + BuildTypeDidYouMean(softwarePath, typePath)).Trim(), McpErrorCode.InvalidParams);
                     case TiaMcpServer.Siemens.PortalErrorCode.InvalidState:
                     case TiaMcpServer.Siemens.PortalErrorCode.InvalidParams:
                         throw new McpException(pex.Message, McpErrorCode.InvalidParams);

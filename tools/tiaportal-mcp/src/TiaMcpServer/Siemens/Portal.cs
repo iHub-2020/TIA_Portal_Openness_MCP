@@ -2263,7 +2263,7 @@ namespace TiaMcpServer.Siemens
             var hmiConnectionType = Type.GetType("Siemens.Engineering.HW.CommunicationConnections.HmiConnection, Siemens.Engineering");
             if (connectionCompositionType == null || hmiConnectionType == null)
             {
-                sb.AppendLine("CommunicationConnections API not available on TIA V20; skipping hardware HMI connection creation.");
+                sb.AppendLine(Capability.Describe(TiaFeature.HardwareHmiConnection) + " Skipping hardware HMI connection creation.");
                 return sb.ToString();
             }
 #else
@@ -11472,10 +11472,7 @@ namespace TiaMcpServer.Siemens
                     throw new PortalException(PortalErrorCode.InvalidState, "No project is open in TIA Portal");
                 }
 
-                if (Engineering.TiaMajorVersion < 20)
-                {
-                    throw new PortalException(PortalErrorCode.InvalidState, "ExportAsDocuments requires TIA Portal V20 or newer");
-                }
+                Capability.RequireSupported(TiaFeature.DocumentExport);
 
                 
                 var softwareContainer = GetSoftwareContainer(softwarePath);
