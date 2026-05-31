@@ -4876,17 +4876,16 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try
             {
-                var ok = Portal.ImportPlcExternalSource(softwarePath, groupPath, filePath);
-                if (ok)
+                Portal.ImportPlcExternalSource(softwarePath, groupPath, filePath);
+                return new ResponseMessage
                 {
-                    return new ResponseMessage
-                    {
-                        Message = "PLC external source imported",
-                        Meta = new JsonObject { ["timestamp"] = DateTime.Now, ["success"] = true }
-                    };
-                }
-
-                throw new McpException($"Failed importing PLC external source. LastError: {Portal.LastPlcGenError}", McpErrorCode.InternalError);
+                    Message = "PLC external source imported",
+                    Meta = new JsonObject { ["timestamp"] = DateTime.Now, ["success"] = true }
+                };
+            }
+            catch (PortalException pex)
+            {
+                throw new McpException($"Failed importing PLC external source [{pex.Code}]: {pex.Message}", pex, McpErrorCode.InternalError);
             }
             catch (Exception ex) when (ex is not McpException)
             {
@@ -4901,17 +4900,16 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try
             {
-                var ok = Portal.DeletePlcExternalSource(softwarePath, externalSourceName);
-                if (ok)
+                Portal.DeletePlcExternalSource(softwarePath, externalSourceName);
+                return new ResponseMessage
                 {
-                    return new ResponseMessage
-                    {
-                        Message = $"PLC external source '{externalSourceName}' deleted or was not present",
-                        Meta = new JsonObject { ["timestamp"] = DateTime.Now, ["success"] = true }
-                    };
-                }
-
-                throw new McpException($"Failed deleting PLC external source '{externalSourceName}'. LastError: {Portal.LastPlcGenError}", McpErrorCode.InternalError);
+                    Message = $"PLC external source '{externalSourceName}' deleted or was not present",
+                    Meta = new JsonObject { ["timestamp"] = DateTime.Now, ["success"] = true }
+                };
+            }
+            catch (PortalException pex)
+            {
+                throw new McpException($"Failed deleting PLC external source '{externalSourceName}' [{pex.Code}]: {pex.Message}", pex, McpErrorCode.InternalError);
             }
             catch (Exception ex) when (ex is not McpException)
             {
@@ -4926,17 +4924,16 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try
             {
-                var ok = Portal.GenerateBlocksFromExternalSource(softwarePath, externalSourceName);
-                if (ok)
+                Portal.GenerateBlocksFromExternalSource(softwarePath, externalSourceName);
+                return new ResponseMessage
                 {
-                    return new ResponseMessage
-                    {
-                        Message = $"Blocks generated from external source '{externalSourceName}'",
-                        Meta = new JsonObject { ["timestamp"] = DateTime.Now, ["success"] = true }
-                    };
-                }
-
-                throw new McpException($"Failed generating blocks from external source '{externalSourceName}'. LastError: {Portal.LastPlcGenError}", McpErrorCode.InternalError);
+                    Message = $"Blocks generated from external source '{externalSourceName}'",
+                    Meta = new JsonObject { ["timestamp"] = DateTime.Now, ["success"] = true }
+                };
+            }
+            catch (PortalException pex)
+            {
+                throw new McpException($"Failed generating blocks from external source '{externalSourceName}' [{pex.Code}]: {pex.Message}", pex, McpErrorCode.InternalError);
             }
             catch (Exception ex) when (ex is not McpException)
             {

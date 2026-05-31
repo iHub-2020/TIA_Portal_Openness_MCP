@@ -45,7 +45,6 @@ namespace TiaMcpServer.Siemens
         private LocalSession? _session;
         private readonly ILogger<Portal>? _logger;
         public string? LastAddDeviceError { get; private set; }
-        public string? LastPlcGenError { get; private set; }
         public string? LastConnectError { get; private set; }
         public string? LastImportError { get; private set; }
         public string? LastCompileError { get; private set; }
@@ -9423,34 +9422,21 @@ namespace TiaMcpServer.Siemens
         /// Removes a PLC external source by name (e.g. <c>Ramp.scl</c> or <c>Ramp</c>) so a subsequent
         /// <see cref="ImportPlcExternalSource"/> can recreate it. Returns true if deleted or if no matching source exists.
         /// </summary>
-        public bool DeletePlcExternalSource(string softwarePath, string externalSourceName)
+        public void DeletePlcExternalSource(string softwarePath, string externalSourceName)
         {
-            LastPlcGenError = "";
             if (IsProjectNull())
-            {
-                LastPlcGenError = "DeletePlcExternalSource: project is null";
-                return false;
-            }
+                throw new PortalException(PortalErrorCode.InvalidState, "DeletePlcExternalSource: project is null");
 
             if (string.IsNullOrWhiteSpace(externalSourceName))
-            {
-                LastPlcGenError = "DeletePlcExternalSource: externalSourceName is empty";
-                return false;
-            }
+                throw new PortalException(PortalErrorCode.InvalidParams, "DeletePlcExternalSource: externalSourceName is empty");
 
             var softwareContainer = GetSoftwareContainer(softwarePath);
             if (softwareContainer?.Software is not PlcSoftware plcSoftware)
-            {
-                LastPlcGenError = $"DeletePlcExternalSource: PlcSoftware not found at '{softwarePath}'";
-                return false;
-            }
+                throw new PortalException(PortalErrorCode.NotFound, $"DeletePlcExternalSource: PlcSoftware not found at '{softwarePath}'");
 
             var sources = TryGetExternalSourcesCollection(plcSoftware);
             if (sources == null)
-            {
-                LastPlcGenError = "DeletePlcExternalSource: ExternalSources collection not available";
-                return false;
-            }
+                throw new PortalException(PortalErrorCode.OpennessError, "DeletePlcExternalSource: ExternalSources collection not available");
 
             foreach (var item in sources)
             {
@@ -9465,42 +9451,35 @@ namespace TiaMcpServer.Siemens
                     if (del != null)
                     {
                         del.Invoke(item, null);
-                        return true;
+                        return;
                     }
 
-                    LastPlcGenError = $"DeletePlcExternalSource: no parameterless Delete() on {item.GetType().Name}";
-                    return false;
+                    throw new PortalException(PortalErrorCode.OpennessError, $"DeletePlcExternalSource: no parameterless Delete() on {item.GetType().Name}");
+                }
+                catch (PortalException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
-                    LastPlcGenError = $"DeletePlcExternalSource: {ex.Message}";
-                    return false;
+                    throw new PortalException(PortalErrorCode.OpennessError, $"DeletePlcExternalSource: {ex.Message}", null, ex);
                 }
             }
 
-            return true;
+            // source not present = idempotent no-op success
         }
 
-        public bool ImportPlcExternalSource(string softwarePath, string groupPath, string filePath)
+        public void ImportPlcExternalSource(string softwarePath, string groupPath, string filePath)
         {
             if (IsProjectNull())
-            {
-                LastPlcGenError = "ImportPlcExternalSource: project is null";
-                return false;
-            }
+                throw new PortalException(PortalErrorCode.InvalidState, "ImportPlcExternalSource: project is null");
             var softwareContainer = GetSoftwareContainer(softwarePath);
             if (softwareContainer?.Software is not PlcSoftware plcSoftware)
-            {
-                LastPlcGenError = $"ImportPlcExternalSource: PlcSoftware not found at '{softwarePath}'";
-                return false;
-            }
+                throw new PortalException(PortalErrorCode.NotFound, $"ImportPlcExternalSource: PlcSoftware not found at '{softwarePath}'");
 
             var group = TryGetExternalSourceGroupByPath(plcSoftware, groupPath);
             if (group == null)
-            {
-                LastPlcGenError = $"ImportPlcExternalSource: ExternalSourceGroup not found (groupPath='{groupPath}')";
-                return false;
-            }
+                throw new PortalException(PortalErrorCode.NotFound, $"ImportPlcExternalSource: ExternalSourceGroup not found (groupPath='{groupPath}')");
 
             // Openness API for external sources differs across TIA versions:
             // some expose Import(FileInfo,...), others expose Add/Create/ImportFromFile(FileInfo,...).
@@ -9516,10 +9495,7 @@ namespace TiaMcpServer.Siemens
 
             var fi = new FileInfo(filePath);
             if (!fi.Exists)
-            {
-                LastPlcGenError = $"ImportPlcExternalSource: file not found '{filePath}'";
-                return false;
-            }
+                throw new PortalException(PortalErrorCode.InvalidParams, $"ImportPlcExternalSource: file not found '{filePath}'");
 
             var candidates = new List<(object Target, MethodInfo Method)>();
             foreach (var tgt in targets)
@@ -9563,9 +9539,8 @@ namespace TiaMcpServer.Siemens
                 }
 
                 var extDump = targets.Count > 1 ? Dump(targets[1]) : "";
-                LastPlcGenError =
-                    $"ImportPlcExternalSource: No import-like method found. group={group.GetType().FullName} methods=[{Dump(group)}] extSources=[{extDump}]";
-                return false;
+                throw new PortalException(PortalErrorCode.OpennessError,
+                    $"ImportPlcExternalSource: No import-like method found. group={group.GetType().FullName} methods=[{Dump(group)}] extSources=[{extDump}]");
             }
 
             var failures = new List<string>();
@@ -9584,8 +9559,7 @@ namespace TiaMcpServer.Siemens
                         var result = importMethod.Invoke(candidate.Target, args);
                         if (importMethod.ReturnType == typeof(void) || result != null)
                         {
-                            LastPlcGenError = null;
-                            return true;
+                            return;
                         }
 
                         failures.Add($"{sig} returned null");
@@ -9598,8 +9572,7 @@ namespace TiaMcpServer.Siemens
                 }
             }
 
-            LastPlcGenError = "ImportPlcExternalSource: all import-like methods failed: " + string.Join(" | ", failures.Take(12));
-            return false;
+            throw new PortalException(PortalErrorCode.OpennessError, "ImportPlcExternalSource: all import-like methods failed: " + string.Join(" | ", failures.Take(12)));
         }
 
         private static bool ExternalSourceNameMatches(string actualName, string requested)
@@ -9679,14 +9652,14 @@ namespace TiaMcpServer.Siemens
             return result;
         }
 
-        public bool GenerateBlocksFromExternalSource(string softwarePath, string externalSourceName)
+        public void GenerateBlocksFromExternalSource(string softwarePath, string externalSourceName)
         {
-            if (IsProjectNull()) return false;
+            if (IsProjectNull()) throw new PortalException(PortalErrorCode.InvalidState, "GenerateBlocksFromExternalSource: project is null");
             var softwareContainer = GetSoftwareContainer(softwarePath);
-            if (softwareContainer?.Software is not PlcSoftware plcSoftware) return false;
+            if (softwareContainer?.Software is not PlcSoftware plcSoftware) throw new PortalException(PortalErrorCode.NotFound, $"GenerateBlocksFromExternalSource: PlcSoftware not found at '{softwarePath}'");
 
             var sources = TryGetExternalSourcesCollection(plcSoftware);
-            if (sources == null) return false;
+            if (sources == null) throw new PortalException(PortalErrorCode.OpennessError, "GenerateBlocksFromExternalSource: ExternalSources collection not available");
 
             object? src = null;
             foreach (var item in sources)
@@ -9700,7 +9673,7 @@ namespace TiaMcpServer.Siemens
                     break;
                 }
             }
-            if (src == null) return false;
+            if (src == null) throw new PortalException(PortalErrorCode.NotFound, $"GenerateBlocksFromExternalSource: external source not found: {externalSourceName}");
 
             // V18+ often exposes GenerateBlocksFromSource(PlcBlockUserGroup, GenerateBlockOption) only;
             // parameterless GenerateBlocks() may not exist.
@@ -9725,8 +9698,7 @@ namespace TiaMcpServer.Siemens
                     if (ps.Length == 0)
                     {
                         gen.Invoke(src, Array.Empty<object>());
-                        LastPlcGenError = null;
-                        return true;
+                        return;
                     }
 
                     if (ps.Length == 2 && ps[1].ParameterType.IsEnum)
@@ -9762,8 +9734,7 @@ namespace TiaMcpServer.Siemens
                         }
 
                         gen.Invoke(src, new[] { blockRoot, optionVal });
-                        LastPlcGenError = null;
-                        return true;
+                        return;
                     }
                 }
                 catch (Exception ex)
@@ -9773,8 +9744,7 @@ namespace TiaMcpServer.Siemens
                 }
             }
 
-            LastPlcGenError = "GenerateBlocksFromExternalSource: " + string.Join(" | ", failures.Take(10));
-            return false;
+            throw new PortalException(PortalErrorCode.OpennessError, "GenerateBlocksFromExternalSource: " + string.Join(" | ", failures.Take(10)));
         }
 
         private static IEnumerable<object?>? TryGetExternalSourcesCollection(PlcSoftware plcSoftware)
@@ -11756,19 +11726,10 @@ namespace TiaMcpServer.Siemens
                     {
                         throw new PortalException(PortalErrorCode.ExportFailed, $"EngineeringNotSupportedException at file '{fileNameWithoutExtension}'. {ex.Message}", null, ex);
                     }
-                    catch (Exception ex)
-                    {
-                        LastPlcGenError = $"ImportFromDocuments('{fileNameWithoutExtension}') threw: {ex.Message}";
-                        throw;
-                    }
 
                     if (result != null && result.State == DocumentResultState.Success)
                     {
                         return true;
-                    }
-                    if (result != null)
-                    {
-                        LastPlcGenError = $"ImportFromDocuments('{fileNameWithoutExtension}') result state: {result.State}";
                     }
                 }
             }
