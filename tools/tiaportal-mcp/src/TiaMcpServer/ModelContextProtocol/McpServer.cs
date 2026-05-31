@@ -5411,7 +5411,7 @@ namespace TiaMcpServer.ModelContextProtocol
         private static bool IsCompilerSummaryDescription(string? description)
         {
             if (string.IsNullOrWhiteSpace(description)) return false;
-            var text = description.Trim();
+            var text = description!.Trim();
             return text.StartsWith("Compiling finished", StringComparison.OrdinalIgnoreCase)
                 || text.StartsWith("Compilation finished", StringComparison.OrdinalIgnoreCase)
                 || text.StartsWith("Kompilierung beendet", StringComparison.OrdinalIgnoreCase);

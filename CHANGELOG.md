@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.0.35] - 2026-05-31
+
+### 内部清理（无用户可见行为变更）
+
+- 删除死代码 `ModelContextProtocol/LadNetworkBuilder.cs`（触点/线圈/并联 LAD 构建器，从未接成任何 MCP 工具；通用梯形图已改走 S7DCL，见 0.0.34）。
+- 修复全部编译告警 → **0 警告 0 错误**：`PlcBuilderToolJson.cs`（`lastTokenText` 改 `string?`、移除未用变量 `tightAfter`）；`Portal.cs`/`McpServer.cs`/`Helper.cs` 的可空性误报用 `!`/`??=` 收口（`IsNullOrWhiteSpace` 守卫后无法收窄等，行为不变）。
+- 重建 V20/V21 exe（0.0.35，0 错误 0 警告）。
+
 ## [0.0.34] - 2026-05-31
 
 ### 修复中文乱码 + 梯形图生成引导到 S7DCL

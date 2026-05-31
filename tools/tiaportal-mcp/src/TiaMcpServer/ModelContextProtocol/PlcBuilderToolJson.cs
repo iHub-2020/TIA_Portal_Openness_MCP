@@ -304,12 +304,11 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             var items = lineOp["items"] as JsonArray
                 ?? throw new ArgumentException("$.operations[" + opIndex + "].items 缺失");
-            string lastTokenText = null;
+            string? lastTokenText = null;
             for (var k = 0; k < items.Count; k++)
             {
                 var item = items[k] as JsonObject
                     ?? throw new ArgumentException("$.operations[" + opIndex + "].items[" + k + "] 必须是对象");
-                bool tightAfter = false;  // 当前项后是否需要紧贴（跟随 ( 等）
                 bool tightBefore = false; // 当前项前是否需要紧贴（如 ) ; , ）
 
                 if (item["sym"] is JsonNode symN)

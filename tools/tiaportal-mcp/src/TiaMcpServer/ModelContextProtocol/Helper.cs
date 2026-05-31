@@ -34,7 +34,7 @@ namespace TiaMcpServer.ModelContextProtocol
         // (e.g. CultureInfo.Parent.Parent.Parent... chain triggers JsonException at depth 64).
         private static object ToSerializableValue(object value)
         {
-            if (value == null) return null;
+            if (value == null) return null!;
             var t = value.GetType();
             if (t.IsPrimitive || value is string || value is decimal || value is DateTime || value is TimeSpan || value is Guid || t.IsEnum)
                 return value;

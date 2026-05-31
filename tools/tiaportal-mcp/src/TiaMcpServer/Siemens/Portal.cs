@@ -5391,7 +5391,7 @@ namespace TiaMcpServer.Siemens
                     if (prop != null && prop.CanRead)
                     {
                         var value = prop.GetValue(tag)?.ToString();
-                        if (!string.IsNullOrWhiteSpace(value)) return value;
+                        if (!string.IsNullOrWhiteSpace(value)) return value!;
                     }
                 }
                 catch
@@ -5399,7 +5399,7 @@ namespace TiaMcpServer.Siemens
                 }
 
                 var attr = TryGetEngineeringAttribute(tag, name)?.ToString();
-                if (!string.IsNullOrWhiteSpace(attr)) return attr;
+                if (!string.IsNullOrWhiteSpace(attr)) return attr!;
             }
 
             return string.Empty;
@@ -6755,9 +6755,10 @@ namespace TiaMcpServer.Siemens
 
         private UnifiedHmiPlcPartnerInfo ResolveUnifiedHmiPlcPartner(string plcSoftwarePath)
         {
+            plcSoftwarePath ??= string.Empty;
             var info = new UnifiedHmiPlcPartnerInfo
             {
-                SoftwarePath = plcSoftwarePath ?? string.Empty,
+                SoftwarePath = plcSoftwarePath,
                 DeviceName = FirstPathSegment(plcSoftwarePath),
                 StationName = FirstPathSegment(plcSoftwarePath),
                 Family = InferUnifiedPlcFamilyFromSoftwarePath(plcSoftwarePath)
@@ -7100,7 +7101,7 @@ namespace TiaMcpServer.Siemens
                     if (prop != null && prop.CanRead)
                     {
                         var value = prop.GetValue(connection)?.ToString();
-                        if (!string.IsNullOrWhiteSpace(value)) return value;
+                        if (!string.IsNullOrWhiteSpace(value)) return value!;
                     }
                 }
                 catch
@@ -7108,7 +7109,7 @@ namespace TiaMcpServer.Siemens
                 }
 
                 var attr = TryGetEngineeringAttribute(connection, name)?.ToString();
-                if (!string.IsNullOrWhiteSpace(attr)) return attr;
+                if (!string.IsNullOrWhiteSpace(attr)) return attr!;
             }
 
             return string.Empty;
