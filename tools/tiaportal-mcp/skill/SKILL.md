@@ -479,8 +479,10 @@ Author two paired files, **both UTF-8 *with* BOM**:
 
 Verified references — copy these, change names + logic:
 ```
-skill/lad-cookbook/MCPVerify_FC_LAD.s7dcl  + .s7res   (FC: 串联/并联/SR/比较/Move/Add)
+skill/lad-cookbook/MCPVerify_FC_LAD.s7dcl    + .s7res  (FC: 串联/并联/SR/比较/Move/Add)
 skill/lad-cookbook/MCPVerify_FB_LAD_v3.s7dcl + .s7res  (FB: 定时器放 Static)
+skill/lad-cookbook/MCPVerify_Mixed_LADSCL.s7dcl + .s7res  (FB: LAD+SCL 混编 — 互锁/比较+定时/SCL算术/边沿,
+                                                          全部 import-verified 形式; 2026-06-11 编译0错)
 ```
 
 Grammar (distilled from the verified sample):
@@ -528,13 +530,57 @@ Element vocabulary: `Contact`/`Coil`/`S_Coil`/`R_Coil`, parallel branches joined
 `Move( in:=, out1=> )`, `Add`/`Sub`/`Mul`/`Div( in1:=, in2:=, out=> )`. `.s7res` `id:`
 values must match every `MLC_*` referenced in `.s7dcl`. For instructions not shown here
 (常闭/negated contact, edges, timers, `Calc`…), **export a real block that uses them with
-`ExportBlocksAsDocuments` and copy the exact `.s7dcl` syntax** — do not guess.
+`ExportBlocksAsDocuments` and copy the exact `.s7dcl` syntax** — BUT beware: **the export form of
+several instructions does NOT re-import** (export grammar ≠ import grammar). Verified 2026-06-11:
+`Gt`/`Lt`/`Ne`/`Eq{ SrcType }( IN1, IN2 )`, `PBox(...)`, and `Move{ Card:=1; DisableENO:=TRUE }( IN, OUT1 )`
+(all from real-block *exports*) **fail `ImportFromDocuments`** with a generic "Failed importing".
+The **import-verified** forms are below.
 
-Import:
+**Real-block verified vocabulary — IMPORT forms** (江夏5T车, hand-authored blocks, compile 0 errors,
+2026-06-11). ⚠️ author the import form (left), never the export form (right):
+
+| Need | S7DCL **import** form (author this) | Export form (do NOT author) |
+|---|---|---|
+| 常开 / 常闭 contact | `Contact( #x )` / `I_Contact( #x )` | — |
+| Negate power flow | `Not()` | — |
+| Coil / Set / Reset | `Coil( … )` / `S_Coil( … )` / `R_Coil( … )` | — |
+| Compare | `GT_Contact`/`LT_Contact`/`EQ_Contact`/`NE_Contact``{ SrcType := DInt }( in1 := …, in2 := … )` | `Gt`/`Lt`/`Eq`/`Ne{ … }( IN1, IN2 )` ✗ |
+| Move | `Move( in := …, out1 => … )` | `Move{ Card:=1; DisableENO:=TRUE }( IN, OUT1 )` ✗ |
+| Edge (rising) | `P_Trig( #memBit )` (in series; `#memBit` = edge-memory bit) | `PBox( … )` ✗ |
+| IEC timer box (global DB) | `"Global_Data".Global_TON[11].TON{ time_type := Time }( PT := T#2s, ET => )`; `TOF`/`TP` same | (same) |
+| IEC timer box (FB static) | `#tonInst.TON{ time_type := Time }( PT := T#500ms, ET => )` | (same) |
+| Symbolic global operand | `Contact( "DB".path.member )` / `Coil( "DB".path.member )` | — |
+| Call FC / FB | `"FCName"()` / `"InstanceDB"( p := …, o => … )` | — |
+
+`Neg` is not import-verified — keep negate networks in SCL.
+
+**Branch (wire) model** — `wire#wN` is a junction: tap *out* (`RUNG wire#wN …` = parallel branch from
+that point) + join *in* (`… END_RUNG wire#wN` = OR back into junction wN).
+
+**Titles must be `MLC_*` refs (in `.s7res`) or omitted** — inline literal titles
+(`S7_NetworkTitle := "中文"`) **fail on import**; strip or convert to `MLC_*`.
+
+**Mixed LAD+SCL (verified V21):** a block with `S7_PreferredLanguage := "LAD"` can interleave
+`{ S7_Language := "SCL" } NETWORK <scl statements> END_NETWORK` with LAD networks. A pure-SCL block
+cannot hold LAD networks — author in LAD when you need the mix. See cookbook
+`MCPVerify_Mixed_LADSCL.s7dcl`.
+
+**Per-network LAD/SCL judgment** — author **LAD** for interlock / limit / brake-timer / workstep-trigger
+/ indicator logic (electricians read power-flow); keep **SCL** for arithmetic/scaling, multi-param
+FC/FB calls, state machines, comms, complex condition aggregation. **Do not force LAD.** (Validated on
+江夏5T车: 02/03/04/09 + A3_2/3/5 reauthored mixed, 0 errors; A0_1/A4_1/comms kept SCL.)
+
+Import (verified MCP workflow, 2026-06-11):
 ```
-ImportBlocksFromDocuments(softwarePath="<plc>", groupPath="", importPath="<dir-with-both-files>")
-CompileSoftware(softwarePath="<plc>")            ← errorCount must be 0
+# 1) write Name.s7dcl + Name.s7res, BOTH UTF-8 *with* BOM, in one dir
+ImportFromDocuments(softwarePath="<plc>", groupPath="<group path or empty>",
+                    importPath="<dir>", fileNameWithoutExtension="<BlockName>",
+                    importOption="Override")   # Override replaces same-name block & keeps its number
+#   batch: ImportBlocksFromDocuments(softwarePath=, groupPath=, importPath=, regexName="")
+CompileAndDiagnosePlc(softwarePath="<plc>")     ← errorCount must be 0
 ```
+- `.s7res` must be present even when titles omitted (minimal: one `MLC_x` with `zh-CN:` + `en-US:`).
+- `ImportBlockFromScl` / `ImportBlocksFromScl` are thin aliases of the two import tools above.
 
 > **Boundary (known TIA limitation):** importing **LAD** from SD documents can fail
 > unless every `.s7res` item also has an **`en-US`** tag, not only `zh-CN`. The
