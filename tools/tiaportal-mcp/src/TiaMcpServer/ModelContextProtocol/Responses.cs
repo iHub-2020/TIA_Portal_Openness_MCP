@@ -119,6 +119,11 @@ namespace TiaMcpServer.ModelContextProtocol
         public BootstrapPortal? Portal { get; set; }
         public string? RecommendedNextTool { get; set; }
         public string? RecommendedReason { get; set; }
+        /// <summary>
+        /// Compact operating rules returned on the very first call so even hosts that never load
+        /// SKILL.md still steer a less-capable model away from the common ordering/parameter mistakes.
+        /// </summary>
+        public IEnumerable<string>? OperatingRules { get; set; }
         public IEnumerable<string>? KnownLimitations { get; set; }
         public BootstrapToolLayers? ToolLayers { get; set; }
         public string? SkillFile { get; set; }

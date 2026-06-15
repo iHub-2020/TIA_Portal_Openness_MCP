@@ -1,5 +1,16 @@
 # Change Log
 
+## [2.2.3] - 2026-06-15 - 笨 AI 健壮性：自愈连接 + 可恢复错误指引 + 操作规则
+
+> 注：v2.2.2 版本号已被既有的「S7DCL skill 文档」Release 占用，故本代码版本顺延为 2.2.3。
+
+针对"搭载 MCP 后较弱的 AI 驱动仍会出 bug"的反馈，从源头降低出错与卡死，**工具数不变（189）**：
+
+- **自愈连接/绑定**：`Portal.IsProjectNull()`（99 个调用点的集中判定）现会在判定"无工程"前尝试自愈——未连接但本机已有 TIA 进程在运行时自动附加并绑定其已打开的工程；已连接但未绑定时自动重绑；本机无 TIA 在运行则不擅自启动（避免缓慢失败），直接落到可执行提示。修复了"AI 忘记先 Connect/Attach 就调用工具"导致的原始崩溃。
+- **可恢复的错误指引**：新增 `McpHints.Recovery()` 异常翻译器，按内部异常链识别 7 类常见失败（未连接 / 无工程 / 工程已被打开 / 名称路径错→提示查 GetProjectTree·GetSoftwareTree / TIA 版本不匹配 / Openness 用户组 / know-how 保护），统一注入到 185 处通用 `catch`（McpServer 175 + Patch 2 + Runtime 8）。错误信息从"只报原始异常"变为"告诉 AI 下一步该做什么"。无法识别时不加噪声。
+- **首调操作规则**：`Bootstrap` 响应新增 `OperatingRules`（5 条：调用顺序 / 写后必须 Compile+Save / 名称要精确 / 读错误信息照做 / 大任务用 ScaffoldProject）。即使宿主不加载 SKILL.md，AI 第一次调用就能拿到正确用法。
+- **更清晰的前置错误**：12 处误导性的 `"No project is open in TIA Portal"` 改为可执行指引（调用 AttachToOpenProject / OpenProject / CreateProject）。
+
 ## [2.2.1] - 2026-06-09 - v2.2.0 三工具真机验证 + 因果溯源在线模式消息修复
 
 v2.2.0 的 3 个在线监控工具已在真机（CPU 1211C @ 192.168.0.32）端到端验证通过：

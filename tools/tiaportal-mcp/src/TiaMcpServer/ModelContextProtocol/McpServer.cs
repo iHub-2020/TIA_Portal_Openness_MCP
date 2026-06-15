@@ -82,7 +82,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error connecting to TIA-Portal: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error connecting to TIA-Portal: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -105,7 +105,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing TIA Portal processes: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing TIA Portal processes: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -123,7 +123,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring Openness user group: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring Openness user group: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -151,7 +151,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error disconnecting from TIA-Portal: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error disconnecting from TIA-Portal: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -190,7 +190,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving TIA-Portal MCP server state: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving TIA-Portal MCP server state: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -265,6 +265,15 @@ namespace TiaMcpServer.ModelContextProtocol
                     L2Count = GetMcpToolNames().Count(),
                 };
 
+                var rules = new[]
+                {
+                    "ORDER: Connect → (OpenProject | AttachToOpenProject | CreateProject) → GetProjectTree → read/write → CompileSoftware → SaveProject. The server now auto-connects and auto-binds an already-open project, but always confirm with GetState/GetProjectTree before writing.",
+                    "AFTER ANY WRITE: call CompileSoftware to validate, then SaveProject to persist. Changes are NOT saved automatically.",
+                    "NAMES ARE EXACT: plc software path defaults to 'PLC_1', HMI to 'HMI_RT_1'. If a name/path is rejected, call GetProjectTree / GetSoftwareTree to read the real names instead of guessing.",
+                    "ON ERROR: read the error message — it names the recovery tool (e.g. 'call OpenProject/AttachToOpenProject'). Do that instead of retrying the same call or switching tools at random.",
+                    "BIG TASKS: to create or extend a whole project in one shot, prefer ScaffoldProject (one JSON spec) over many small calls; pass dryRun=true first to validate the spec offline.",
+                };
+
                 var limits = new[]
                 {
                     "Openness API CANNOT: read/change CPU RUN-STOP mode (use OPC UA), read fault buffer, ClearForces, selective per-block download.",
@@ -281,6 +290,7 @@ namespace TiaMcpServer.ModelContextProtocol
                     Portal = portalDto,
                     RecommendedNextTool = nextTool,
                     RecommendedReason = reason,
+                    OperatingRules = rules,
                     KnownLimitations = limits,
                     ToolLayers = layers,
                     SkillFile = "tools/tiaportal-mcp/skill/SKILL.md",
@@ -296,7 +306,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Bootstrap unexpected error: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Bootstrap unexpected error: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -425,7 +435,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error running capability self-test: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error running capability self-test: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -546,7 +556,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error running online monitoring safety self-test: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error running online monitoring safety self-test: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -654,7 +664,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error generating acceptance report: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error generating acceptance report: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -790,7 +800,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error generating error report: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error generating error report: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -977,7 +987,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving open projects: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving open projects: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1037,7 +1047,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error opening project '{path}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error opening project '{path}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1061,7 +1071,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error attaching to open project '{projectName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error attaching to open project '{projectName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1092,7 +1102,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error creating project: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error creating project: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1175,10 +1185,10 @@ namespace TiaMcpServer.ModelContextProtocol
                 if (!Portal.IsConnected()) { Connect(); Step("connect", "ok"); }
                 else Step("connect", "skipped", "already connected");
             }
-            catch (Exception ex) { Step("connect", "failed", ex.Message); resp.Ok = false; throw new McpException($"ScaffoldProject aborted at connect: {ex.Message}", ex, McpErrorCode.InternalError); }
+            catch (Exception ex) { Step("connect", "failed", ex.Message); resp.Ok = false; throw new McpException($"ScaffoldProject aborted at connect: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
 
             try { CreateProject(directoryPath, projectName); Step("createProject", "ok", directoryPath); }
-            catch (Exception ex) { Step("createProject", "failed", ex.Message); resp.Ok = false; throw new McpException($"ScaffoldProject aborted at createProject: {ex.Message}", ex, McpErrorCode.InternalError); }
+            catch (Exception ex) { Step("createProject", "failed", ex.Message); resp.Ok = false; throw new McpException($"ScaffoldProject aborted at createProject: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
 
             try
             {
@@ -1187,7 +1197,7 @@ namespace TiaMcpServer.ModelContextProtocol
                 else throw new McpException($"PLC device add failed: {d.Error}", McpErrorCode.InternalError);
             }
             catch (McpException) { Step("addDevicePlc", "failed", "see error"); resp.Ok = false; throw; }
-            catch (Exception ex) { Step("addDevicePlc", "failed", ex.Message); resp.Ok = false; throw new McpException($"ScaffoldProject aborted at addDevicePlc: {ex.Message}", ex, McpErrorCode.InternalError); }
+            catch (Exception ex) { Step("addDevicePlc", "failed", ex.Message); resp.Ok = false; throw new McpException($"ScaffoldProject aborted at addDevicePlc: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
 
             // ---- optional HMI device ----
             bool hmiRequested = !string.IsNullOrWhiteSpace(hmiName);
@@ -1363,7 +1373,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error saving local project/session: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error saving local project/session: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1400,7 +1410,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error saving local project/session as '{newProjectPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error saving local project/session as '{newProjectPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1455,7 +1465,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error closing local project/session: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error closing local project/session: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1490,7 +1500,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving project tree: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving project tree: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1526,7 +1536,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving device info from '{devicePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving device info from '{devicePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1562,7 +1572,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving device item info from '{deviceItemPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving device item info from '{deviceItemPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1588,7 +1598,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving device item tree from '{deviceItemPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving device item tree from '{deviceItemPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1614,7 +1624,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving network info from '{deviceItemPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving network info from '{deviceItemPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1630,7 +1640,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error setting device item attribute '{attributeName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error setting device item attribute '{attributeName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1645,7 +1655,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error validating automation context: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error validating automation context: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1681,7 +1691,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error connecting device nodes to PROFINET subnet: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error connecting device nodes to PROFINET subnet: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1709,7 +1719,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error validating hardware network plan: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error validating hardware network plan: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1725,7 +1735,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring subnet '{subnetName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring subnet '{subnetName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1742,7 +1752,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error attaching device node to subnet '{subnetName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error attaching device node to subnet '{subnetName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1757,7 +1767,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error setting CPU common settings for '{cpuPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error setting CPU common settings for '{cpuPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1783,7 +1793,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error probing hardware HMI connection owner candidates: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error probing hardware HMI connection owner candidates: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1809,7 +1819,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error scanning hardware HMI connection whitelisted services: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error scanning hardware HMI connection whitelisted services: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1857,7 +1867,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving devices: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving devices: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1887,7 +1897,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error adding device: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error adding device: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1929,7 +1939,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error adding device with fallback: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error adding device with fallback: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1956,7 +1966,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error searching installed GSD devices: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error searching installed GSD devices: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -1989,7 +1999,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error searching hardware catalog: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error searching hardware catalog: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2038,7 +2048,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error adding GSD device with probe: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error adding GSD device with probe: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2082,7 +2092,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error adding hardware catalog device with probe: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error adding hardware catalog device with probe: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2122,7 +2132,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving software info from '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving software info from '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2153,7 +2163,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving HMI program info from '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving HMI program info from '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2170,7 +2180,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing HMI software '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing HMI software '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2188,7 +2198,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing HMI screen '{screenName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing HMI screen '{screenName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2206,7 +2216,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing HMI tag table '{tagTableName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing HMI tag table '{tagTableName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2225,7 +2235,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing HMI tag '{tagName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing HMI tag '{tagName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2244,7 +2254,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing HMI screen item '{itemName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing HMI screen item '{itemName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2264,7 +2274,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing property '{propertyPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing property '{propertyPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2283,7 +2293,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring unified HMI start/stop: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring unified HMI start/stop: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2300,7 +2310,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring HMI screen '{screenName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring HMI screen '{screenName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2315,7 +2325,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring HMI tag table '{tagTableName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring HMI tag table '{tagTableName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2337,7 +2347,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring HMI tag '{tagName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring HMI tag '{tagName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2355,7 +2365,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring HMI connection '{connectionName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring HMI connection '{connectionName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2377,7 +2387,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring HMI screen item '{itemName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring HMI screen item '{itemName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2394,7 +2404,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error applying Unified HMI design to '{screenName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error applying Unified HMI design to '{screenName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2457,7 +2467,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error applying Unified HMI theme: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error applying Unified HMI theme: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2474,7 +2484,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error applying Unified HMI layout: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error applying Unified HMI layout: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2488,7 +2498,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building Classic HMI screen XML offline: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building Classic HMI screen XML offline: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -2976,7 +2986,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building Classic HMI tag table XML offline: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building Classic HMI tag table XML offline: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3003,7 +3013,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building Classic HMI minimal package offline: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building Classic HMI minimal package offline: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3043,7 +3053,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error writing Classic HMI minimal package files offline: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error writing Classic HMI minimal package files offline: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3071,7 +3081,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error validating Classic HMI minimal package files offline: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error validating Classic HMI minimal package files offline: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3100,7 +3110,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error validating Classic HMI PLC symbol sync offline: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error validating Classic HMI PLC symbol sync offline: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3128,7 +3138,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building PLC symbol manifest offline: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building PLC symbol manifest offline: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3155,7 +3165,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error running Classic HMI offline validation suite: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error running Classic HMI offline validation suite: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3183,7 +3193,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error running offline release validation suite: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error running offline release validation suite: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3211,7 +3221,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error running V2 plan completion audit: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error running V2 plan completion audit: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3241,7 +3251,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building release diagnostic report: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building release diagnostic report: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3272,7 +3282,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building release runbook: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building release runbook: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3304,7 +3314,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building release manifest: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building release manifest: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3331,7 +3341,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error rebuilding release handoff artifacts: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error rebuilding release handoff artifacts: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3359,7 +3369,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error running Classic HMI temporary import preflight: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error running Classic HMI temporary import preflight: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3389,7 +3399,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error running HMI template PLC sync precheck suite: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error running HMI template PLC sync precheck suite: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3437,7 +3447,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building Unified HMI template execution design JSON: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building Unified HMI template execution design JSON: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3521,7 +3531,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building Unified HMI template execution design manifest: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building Unified HMI template execution design manifest: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3687,7 +3697,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error binding button '{buttonName}' to tag '{tagName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error binding button '{buttonName}' to tag '{tagName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3708,7 +3718,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing Unified HMI API types: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing Unified HMI API types: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3725,7 +3735,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring button event handler '{buttonName}.{eventType}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring button event handler '{buttonName}.{eventType}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3745,7 +3755,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing button event script '{buttonName}.{eventType}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing button event script '{buttonName}.{eventType}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3765,7 +3775,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error setting button event script '{buttonName}.{eventType}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error setting button event script '{buttonName}.{eventType}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3793,7 +3803,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error building Unified HMI button action script: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error building Unified HMI button action script: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3819,7 +3829,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error running HMI action script recipe safety self-test: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error running HMI action script recipe safety self-test: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3865,7 +3875,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error applying Unified HMI button action '{buttonName}.{eventType}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error applying Unified HMI button action '{buttonName}.{eventType}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3883,7 +3893,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error ensuring dynamization '{itemName}.{propertyName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error ensuring dynamization '{itemName}.{propertyName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3904,7 +3914,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error binding tag dynamization '{itemName}.{propertyName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error binding tag dynamization '{itemName}.{propertyName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3929,7 +3939,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing HMI screens for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing HMI screens for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3954,7 +3964,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing HMI tag tables for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing HMI tag tables for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -3980,7 +3990,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing HMI tags for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing HMI tags for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4005,7 +4015,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing HMI connections for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing HMI connections for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4031,7 +4041,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting HMI screen '{screenName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting HMI screen '{screenName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4057,7 +4067,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting HMI tag table '{tagTableName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting HMI tag table '{tagTableName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4083,7 +4093,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting HMI connection '{connectionName}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting HMI connection '{connectionName}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4111,7 +4121,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting HMI program: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting HMI program: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4136,7 +4146,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing HMI screen: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing HMI screen: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4161,7 +4171,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing HMI tag table: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing HMI tag table: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4185,7 +4195,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing HMI connection: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing HMI connection: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4210,7 +4220,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing HMI screens from '{dir}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing HMI screens from '{dir}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4235,7 +4245,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing HMI tag tables from '{dir}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing HMI tag tables from '{dir}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4263,7 +4273,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving cross references: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving cross references: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4288,7 +4298,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing PLC external sources: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing PLC external sources: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4313,7 +4323,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing PLC tag tables: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing PLC tag tables: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4340,7 +4350,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting PLC tag table: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting PLC tag table: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4365,7 +4375,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing PLC tag table: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing PLC tag table: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4390,7 +4400,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing PLC tag tables from '{dir}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing PLC tag tables from '{dir}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4415,7 +4425,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing PLC watch tables: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing PLC watch tables: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4439,7 +4449,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing force tables for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing force tables for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4464,7 +4474,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error setting watch table entry: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error setting watch table entry: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4484,7 +4494,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error setting force table entry: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error setting force table entry: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4511,7 +4521,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting PLC watch table: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting PLC watch table: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4534,7 +4544,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting PLC watch tables: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting PLC watch tables: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4550,7 +4560,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error probing PLC monitor/online capabilities: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error probing PLC monitor/online capabilities: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4568,7 +4578,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error reading PLC watch table values read-only: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error reading PLC watch table values read-only: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4652,7 +4662,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error planning online read-only monitoring: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error planning online read-only monitoring: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4807,7 +4817,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error planning read-only data provider: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error planning read-only data provider: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4872,7 +4882,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error probing global library: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error probing global library: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4894,7 +4904,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing global-library master copy: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing global-library master copy: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -4928,7 +4938,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error analyzing global library package: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error analyzing global library package: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5007,7 +5017,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error planning global library template reuse: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error planning global library template reuse: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5035,7 +5045,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error analyzing HMI template/reference assets: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error analyzing HMI template/reference assets: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5062,7 +5072,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error analyzing Unified HMI template layout: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error analyzing Unified HMI template layout: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5097,7 +5107,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing technology objects: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing technology objects: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5113,7 +5123,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ExportTechnologyObject(softwarePath, toName, exportPath); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error exporting technology object: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error exporting technology object: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ExportTechnologyObjectsToDirectory"), Description(
@@ -5128,7 +5138,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ExportTechnologyObjectsToDirectory(softwarePath, exportDir, regexName); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error batch-exporting technology objects: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error batch-exporting technology objects: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ImportTechnologyObject"), Description("[L2][PLC-Software]Import one PLC Technology Object XML file into PLC software (best-effort)")]
@@ -5152,7 +5162,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing technology object: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing technology object: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5177,7 +5187,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing technology objects from '{dir}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing technology objects from '{dir}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5242,7 +5252,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error writing SCL source file: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error writing SCL source file: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5267,7 +5277,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing PLC external source: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing PLC external source: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5291,7 +5301,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error deleting PLC external source: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error deleting PLC external source: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5315,7 +5325,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error generating blocks from external source: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error generating blocks from external source: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5329,7 +5339,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.GetOpcUaConfig(softwarePath); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error reading OPC UA config: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error reading OPC UA config: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "SetOpcUaInterfaceEnabled"), Description(
@@ -5346,7 +5356,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.SetOpcUaInterfaceEnabled(softwarePath, interfaceName, enabled, interfaceType); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error setting OPC UA interface enabled state: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error setting OPC UA interface enabled state: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ExportOpcUaInterface"), Description(
@@ -5362,7 +5372,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ExportOpcUaInterface(softwarePath, interfaceName, exportPath, interfaceType); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error exporting OPC UA interface: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error exporting OPC UA interface: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ImportOpcUaInterface"), Description(
@@ -5379,7 +5389,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ImportOpcUaInterface(softwarePath, importPath, interfaceType); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error importing OPC UA interface: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error importing OPC UA interface: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ExportAlarmClasses"), Description(
@@ -5393,7 +5403,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ExportAlarmClasses(softwarePath, exportPath); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error exporting alarm classes: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error exporting alarm classes: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ImportAlarmClasses"), Description(
@@ -5406,7 +5416,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ImportAlarmClasses(softwarePath, importPath); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error importing alarm classes: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error importing alarm classes: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ExportAlarmTextLists"), Description(
@@ -5421,7 +5431,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ExportAlarmTextLists(softwarePath, exportPath); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error exporting alarm text lists: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error exporting alarm text lists: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ImportAlarmTextLists"), Description(
@@ -5435,7 +5445,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ImportAlarmTextLists(softwarePath, importPath); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error importing alarm text lists: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error importing alarm text lists: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "ExportAlarmInstanceTexts"), Description(
@@ -5453,7 +5463,7 @@ namespace TiaMcpServer.ModelContextProtocol
         {
             try { return Portal.ExportAlarmInstanceTexts(softwarePath, exportPath, includeInfoText, includeAdditionalTexts, includeAlarmClass); }
             catch (Exception ex) when (ex is not McpException)
-            { throw new McpException($"Unexpected error exporting alarm instance texts: {ex.Message}", ex, McpErrorCode.InternalError); }
+            { throw new McpException($"Unexpected error exporting alarm instance texts: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError); }
         }
 
         [McpServerTool(Name = "CompileSoftware"), Description("[L1][PLC-Software] Compile all blocks in the PLC software. Requires: Connect + OpenProject. Returns basic success/failure. For structured error/warning details use CompileAndDiagnosePlc instead. Must compile before ExportBlock if any blocks are inconsistent. After adding new blocks via import, always compile to catch type/interface mismatches.")]
@@ -5488,7 +5498,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error compiling software '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error compiling software '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5511,7 +5521,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error reading online state for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error reading online state for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5537,7 +5547,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error going online for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error going online for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5554,7 +5564,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error going offline for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error going offline for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5576,7 +5586,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error comparing '{softwarePath}' to online: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error comparing '{softwarePath}' to online: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5596,7 +5606,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error checking download readiness for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error checking download readiness for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5640,7 +5650,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex)
             {
-                throw new McpException($"Unexpected error downloading to '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error downloading to '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5897,7 +5907,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving software tree from '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving software tree from '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -5945,7 +5955,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving block info from '{blockPath}' in '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving block info from '{blockPath}' in '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6002,7 +6012,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving blocks with regex '{regexName}' in '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving blocks with regex '{regexName}' in '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6036,7 +6046,7 @@ namespace TiaMcpServer.ModelContextProtocol
             catch (Exception ex) when (ex is not McpException)
             {
                 // Generic unexpected failure wrapper
-                throw new McpException($"Unexpected error retrieving block hierarchy for '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving block hierarchy for '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6103,7 +6113,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting block from '{blockPath}' to '{exportPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting block from '{blockPath}' to '{exportPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6131,7 +6141,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting block to temp: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting block to temp: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6265,7 +6275,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Failed importing block from '{importPath}' to '{groupPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Failed importing block from '{importPath}' to '{groupPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6290,7 +6300,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing blocks from '{dir}' to '{groupPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing blocks from '{dir}' to '{groupPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6496,7 +6506,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error compiling software '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error compiling software '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6550,7 +6560,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error repairing/reimporting block '{importPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error repairing/reimporting block '{importPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6827,7 +6837,7 @@ namespace TiaMcpServer.ModelContextProtocol
                 }
                 
                 Logger?.LogError(ex, $"Failed exporting blocks with '{regexName}' from '{softwarePath}' to {exportPath}");
-                throw new McpException($"Unexpected error exporting blocks with '{regexName}' from '{softwarePath}' to {exportPath}: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting blocks with '{regexName}' from '{softwarePath}' to {exportPath}: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6854,7 +6864,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting blocks to temp: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting blocks to temp: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6899,7 +6909,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving type info from '{typePath}' in '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving type info from '{typePath}' in '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -6953,7 +6963,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error retrieving user defined types with regex '{regexName}' in '{softwarePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error retrieving user defined types with regex '{regexName}' in '{softwarePath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7007,7 +7017,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting type from '{typePath}' to '{exportPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting type from '{typePath}' to '{exportPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7035,7 +7045,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting type to temp: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting type to temp: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7064,7 +7074,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing type from '{importPath}' to '{groupPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing type from '{importPath}' to '{groupPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7085,7 +7095,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error seeding project from reference: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error seeding project from reference: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7274,7 +7284,7 @@ namespace TiaMcpServer.ModelContextProtocol
                 }
                 
                 Logger?.LogError(ex, $"Failed exporting types '{regexName}' from '{softwarePath}' to {exportPath}");
-                throw new McpException($"Unexpected error exporting types '{regexName}' from '{softwarePath}' to {exportPath}: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting types '{regexName}' from '{softwarePath}' to {exportPath}: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7301,7 +7311,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error exporting types to temp: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting types to temp: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7511,7 +7521,7 @@ namespace TiaMcpServer.ModelContextProtocol
                 }
                 
                 Logger?.LogError(ex, $"Failed exporting documents to '{exportPath}'");
-                throw new McpException($"Unexpected error exporting documents to '{exportPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error exporting documents to '{exportPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7591,7 +7601,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error importing from documents: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing from documents: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7739,7 +7749,7 @@ namespace TiaMcpServer.ModelContextProtocol
                 }
 
                 Logger?.LogError(ex, $"Failed importing documents from '{importPath}'");
-                throw new McpException($"Unexpected error importing documents from '{importPath}': {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error importing documents from '{importPath}': {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7756,7 +7766,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing object: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing object: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7773,7 +7783,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error reading property: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error reading property: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7791,7 +7801,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error listing children: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error listing children: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7810,7 +7820,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error invoking method: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error invoking method: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7828,7 +7838,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error describing service: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error describing service: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -7848,7 +7858,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"Unexpected error invoking service method: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"Unexpected error invoking service method: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 

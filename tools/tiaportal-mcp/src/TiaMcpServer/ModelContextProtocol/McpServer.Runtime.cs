@@ -84,7 +84,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"S7 identity probe failed: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"S7 identity probe failed: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -155,7 +155,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"S7 live read failed: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"S7 live read failed: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -222,7 +222,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"S7 trend sampling failed: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"S7 trend sampling failed: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -240,7 +240,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"TraceTagCause failed: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"TraceTagCause failed: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -262,7 +262,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"TraceTagCauseLive failed: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"TraceTagCauseLive failed: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -313,7 +313,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"OPC UA live read failed: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"OPC UA live read failed: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -361,7 +361,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"GetPlcRunStateS7 failed: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"GetPlcRunStateS7 failed: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
 
@@ -382,7 +382,7 @@ namespace TiaMcpServer.ModelContextProtocol
             }
             catch (Exception ex) when (ex is not McpException)
             {
-                throw new McpException($"MonitorWatchTableLiveS7 failed: {ex.Message}", ex, McpErrorCode.InternalError);
+                throw new McpException($"MonitorWatchTableLiveS7 failed: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
     }
