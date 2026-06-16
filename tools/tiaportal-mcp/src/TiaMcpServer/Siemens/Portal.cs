@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Siemens.Engineering;
+using Siemens.Engineering.Cax;
 using Siemens.Engineering.Compiler;
 using Siemens.Engineering.Connection;
 using Siemens.Engineering.Download;
@@ -1796,6 +1797,80 @@ namespace TiaMcpServer.Siemens
             }
 
             return list;
+        }
+
+        // Read-only: export a device's hardware configuration to an AutomationML (CAx) file.
+        // The .aml contains the configured IP address, subnet/mask, PN device name and topology -
+        // information not surfaced by GetDeviceItemNetworkInfo (which omits the node Address).
+        public ModelContextProtocol.CaxExportResult ExportDeviceConfigurationAml(string devicePath, string exportPath)
+        {
+            if (IsProjectNull())
+            {
+                throw new PortalException(PortalErrorCode.InvalidState, "No project is open in TIA Portal");
+            }
+
+            var device = Guard.RequireNotNull(GetDevice(devicePath), "Device", devicePath);
+
+            // Resolve final file path: treat a directory or extension-less path as a folder, else use as-is.
+            string filePath;
+            if (Directory.Exists(exportPath) || string.IsNullOrEmpty(Path.GetExtension(exportPath)))
+            {
+                var safeName = string.Concat((device.Name ?? "device").Split(Path.GetInvalidFileNameChars()));
+                filePath = Path.Combine(exportPath, $"{safeName}.aml");
+            }
+            else
+            {
+                filePath = exportPath;
+            }
+
+            var dir = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            if (File.Exists(filePath)) File.Delete(filePath);
+
+            var cax = _project!.GetService<CaxProvider>();
+            if (cax == null)
+            {
+                throw new PortalException(PortalErrorCode.InvalidState, "CAx/AML export service is not available for this project");
+            }
+
+            var result = cax.Export(device, new FileInfo(filePath));
+            var messageLines = FlattenTransferMessages(result?.Messages);
+            var state = result?.State.ToString() ?? "Unknown";
+            var ok = result != null && result.State != TransferResultState.Error;
+
+            if (!ok && !File.Exists(filePath))
+            {
+                throw new PortalException(PortalErrorCode.ExportFailed,
+                    $"CAx/AML export failed (state={state}): " + (messageLines.Count > 0 ? string.Join(" | ", messageLines) : "no detail returned"));
+            }
+
+            return new ModelContextProtocol.CaxExportResult
+            {
+                DeviceName = device.Name ?? devicePath,
+                FilePath = filePath,
+                Success = ok,
+                State = state,
+                ErrorCount = result?.ErrorCount ?? 0,
+                WarningCount = result?.WarningCount ?? 0,
+                Messages = messageLines
+            };
+        }
+
+        private static List<string> FlattenTransferMessages(IEnumerable<TransferResultMessage>? messages)
+        {
+            var lines = new List<string>();
+            void Walk(IEnumerable<TransferResultMessage>? ms)
+            {
+                if (ms == null) return;
+                foreach (var m in ms)
+                {
+                    if (m == null) continue;
+                    lines.Add($"[{m.State}] {m.Message}");
+                    try { Walk(m.Messages); } catch { }
+                }
+            }
+            Walk(messages);
+            return lines;
         }
 
         public ResponseMessage SetDeviceItemAttribute(string deviceItemPath, string attributeName, string value)
@@ -12888,9 +12963,19 @@ namespace TiaMcpServer.Siemens
 
                 PlcBlockGroup? currentGroup = plcSoftware.BlockGroup;
 
-                foreach (var groupName in groupNames)
+                // GetSoftwareTree labels the root user block group "Program blocks" (localized "程序块").
+                // Callers naturally copy that full path, so skip a leading segment that denotes the root itself.
+                var startIndex = 0;
+                if (groupNames.Length > 0 &&
+                    (groupNames[0].Equals("Program blocks", StringComparison.OrdinalIgnoreCase) ||
+                     groupNames[0].Equals("程序块", StringComparison.OrdinalIgnoreCase)))
                 {
-                    currentGroup = currentGroup.Groups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+                    startIndex = 1;
+                }
+
+                for (var i = startIndex; i < groupNames.Length; i++)
+                {
+                    currentGroup = currentGroup.Groups.FirstOrDefault(g => g.Name.Equals(groupNames[i], StringComparison.OrdinalIgnoreCase));
 
                     if (currentGroup == null)
                     {

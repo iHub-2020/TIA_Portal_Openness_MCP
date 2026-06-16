@@ -1628,6 +1628,37 @@ namespace TiaMcpServer.ModelContextProtocol
             }
         }
 
+        [McpServerTool(Name = "ExportDeviceAml"), Description("[L2][Hardware] Read-only: export a device's hardware configuration to an AutomationML (CAx) .aml file. The file contains the configured IP address, subnet/mask, PROFINET device name and topology — info GetDeviceItemNetworkInfo omits. devicePath is the station/device path from GetProjectTree (e.g. 'S7-1200 station_3'). exportPath may be a folder (file named <device>.aml) or a full .aml path. Does NOT modify the project or go online.")]
+        public static ResponseExportDeviceAml ExportDeviceAml(
+            [Description("devicePath: station/device path from GetProjectTree, e.g. 'S7-1200 station_3'")] string devicePath,
+            [Description("exportPath: target folder or full .aml file path")] string exportPath)
+        {
+            try
+            {
+                var result = Portal.ExportDeviceConfigurationAml(devicePath, exportPath);
+                return new ResponseExportDeviceAml
+                {
+                    Message = $"Device '{result.DeviceName}' exported to AML at '{result.FilePath}' (state={result.State}, errors={result.ErrorCount}, warnings={result.WarningCount})",
+                    DeviceName = result.DeviceName,
+                    FilePath = result.FilePath,
+                    Success = result.Success,
+                    State = result.State,
+                    ErrorCount = result.ErrorCount,
+                    WarningCount = result.WarningCount,
+                    Messages = result.Messages,
+                    Meta = new JsonObject { ["timestamp"] = DateTime.Now, ["success"] = true }
+                };
+            }
+            catch (PortalException pex)
+            {
+                throw new McpException($"CAx/AML export failed for '{devicePath}': {pex.Message}", pex, McpErrorCode.InternalError);
+            }
+            catch (Exception ex) when (ex is not McpException)
+            {
+                throw new McpException($"Unexpected error exporting AML from '{devicePath}': {ex.Message}", ex, McpErrorCode.InternalError);
+            }
+        }
+
         [McpServerTool(Name = "SetDeviceItemAttribute"), Description("[L2][Hardware]Set one exact DeviceItem attribute by name with type coercion and detailed error return. Use GetDeviceItemInfo/GetDeviceItemNetworkInfo first.")]
         public static ResponseMessage SetDeviceItemAttribute(
             [Description("deviceItemPath: path in the project structure to the device item")] string deviceItemPath,
