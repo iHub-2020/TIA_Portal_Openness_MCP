@@ -516,9 +516,13 @@ namespace TiaMcpServer.ModelContextProtocol
             [Description("Object kind: Project|Portal|Device|DeviceItem|Software|Block|Type|HmiScreen|HmiTag|HmiScreenItem")] string objectKind,
             [Description("Object path")] string objectPath,
             [Description("Method name (case-insensitive)")] string methodName,
-            [Description("JSON array of args, e.g. [\"AttrName\"]. Empty for no args.")] JsonArray? args = null,
+            [Description("JSON array of args, e.g. [\"AttrName\"]. Empty for no args.")] System.Text.Json.JsonElement[]? args = null,
             [Description("softwarePath required for Block/Type")] string softwarePath = "",
             [Description("Allow write/dangerous methods. Default false.")] bool allowWrite = false)
+            => InvokeObject(objectKind, objectPath, methodName, ToArgsArray(args), softwarePath, allowWrite);
+
+        // Internal overload (no tool attribute): existing in-process callers pass a JsonArray directly.
+        public static ResponseObjectValue InvokeObject(string objectKind, string objectPath, string methodName, JsonArray? args, string softwarePath = "", bool allowWrite = false)
         {
             try
             {
@@ -554,19 +558,25 @@ namespace TiaMcpServer.ModelContextProtocol
             [Description("Target object path")] string objectPath,
             [Description("Service type suffix, e.g. CrossReferenceService or ICompilable")] string serviceTypeSuffix,
             [Description("Method name (case-insensitive)")] string methodName,
-            [Description("JSON array of args, empty for no args")] JsonArray? args = null,
+            [Description("JSON array of args, empty for no args")] System.Text.Json.JsonElement[]? args = null,
             [Description("softwarePath required for Block/Type")] string softwarePath = "",
             [Description("Allow write/dangerous methods. Default false.")] bool allowWrite = false)
         {
             try
             {
-                return Portal.InvokeService(objectKind, objectPath, serviceTypeSuffix, methodName, args, softwarePath, allowWrite);
+                return Portal.InvokeService(objectKind, objectPath, serviceTypeSuffix, methodName, ToArgsArray(args), softwarePath, allowWrite);
             }
             catch (Exception ex) when (ex is not McpException)
             {
                 throw new McpException($"Unexpected error invoking service method: {ex.Message}{McpHints.Recovery(ex)}", ex, McpErrorCode.InternalError);
             }
         }
+
+        // Reflection-bridge args arrive as a native JSON array. We accept JsonElement[] (not JsonArray) so the
+        // generated tool schema is a well-formed `type:array` WITH `items`, which strict clients (VS Code) require;
+        // a bare JsonArray param emits `type:array` without items and gets rejected. Rebuild a JsonArray for Portal.
+        private static JsonArray? ToArgsArray(System.Text.Json.JsonElement[]? args)
+            => args == null ? null : new JsonArray(args.Select(e => JsonNode.Parse(e.GetRawText())).ToArray());
 
         private static ImportDocumentOptions ParseImportDocumentOption(string option)
         {
