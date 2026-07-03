@@ -1,5 +1,17 @@
 # Change Log
 
+## [2.2.8] - 未发布 - 弱模型档位回归 + Doctor 体检 + 写操作默认干跑 + VS Code schema 修复
+
+围绕「外部环境部署 + 弱 AI + 出错率」（lite 档位与 Doctor 此前只存在于 SKILL 文档、代码在迁仓时丢失，本版补齐并超越原实现）：
+
+- **lite 工具档位（弱模型/受限宿主）**：`TIA_MCP_PROFILE=lite` 环境变量生效——`tools/list` 只暴露 [L0]/[L1] 共 42 个核心工具（full=200），弱模型不再被 200 个工具淹没，VS Code 的 128 工具上限也不再爆。一键写入：`tia config --lite`（宿主配置里自动带 `env`），GUI 配置向导同步提供勾选。stdio 实测 full=200 / lite=42、核心工具（Bootstrap/Connect/GetProjectTree/ScaffoldProject/CompileSoftware/SaveProject/Doctor）全在。
+- **`Doctor` 工具回归 + 新 CLI `tia doctor`**：MCP 工具版一次体检 TIA 安装/Openness 用户组/连接与项目状态，逐项给出精确修法，`fix=true` 自动补 Openness 组；**CLI 版 `tia doctor [--fix]` 在 MCP 宿主根本起不来 server 的时候也能用**（正是最需要体检的场景），额外检查 exe 编译版本与本机 TIA 版本匹配、四宿主配置是否已注册。stdio 调用与 CLI 实测输出正确。
+- **启动失败不再无声**：TIA 未装（Openness 初始化 FileNotFound）与用户不在 Openness 组两条失败路径，stderr/日志给出中英文修复指引（指向 `tia doctor`），后者退出码从 0 改为 2，MCP 宿主能感知失败。
+- **写操作默认干跑（约束加强）**：`ScaffoldProject` 的 `dryRun` 默认值 false→**true**——默认调用只做离线校验、不连 TIA 不建工程，干跑干净后需显式 `dryRun=false` 才真跑；干跑结果消息里明确指引下一步。与 ServerInstructions「永远先 dryRun」铁律一致，弱模型一把梭建废工程的路径被堵死。（行为变更：依赖旧默认值的调用方需显式传 `dryRun=false`。）
+- **VS Code 工具校验修复随本版 exe 发布**（源码 38043e9 已在 master）：`InvokeObject`/`InvokeService` 数组入参 schema 补 `items`，VS Code 不再拒收。
+- **配置脚本加固**：`配置MCP.bat`/`配置MCP-v20.bat` 先检查引擎 exe 存在（防"只拷了 bat"），完成后提示 `--lite`/`doctor`/`--print` 三条路。
+- 验证：V20/V21 双编译 0 错；stdio 握手实测（full/lite 工具数、Doctor 诊断内容、instructions 下发）；`tia doctor`/`tia config --print --lite` CLI 实测。
+
 ## [2.2.7] - 2026-07-02 - 门槛归零：版本自路由 + 四宿主一键配置 + 模型引导（instructions/GetAuthoringGuide）
 
 本轮全部围绕两个真实用户痛点：①配置要人肉填 MCP 路径/博途路径/版本（issue #9）②非 Claude 的 AI 调用时生成代码质量差、耗时长。
