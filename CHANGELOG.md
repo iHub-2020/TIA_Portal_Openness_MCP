@@ -1,5 +1,14 @@
 # Change Log
 
+## [2.3.0] - 2026-07-04 - 新工具 DescribeBlockLogic：把梯形图读成可读逻辑（含"恒断/禁用行"自动标注）
+
+回应"分析慢/准确率低/只敢用 SCL 躲梯形图"的痛点——加一个让模型/人像读 SCL 一样读 LAD 的工具：
+
+- **新工具 `DescribeBlockLogic(softwarePath, blockPath)`**［L1，lite 档也含］：导出块后把每个 LAD 网络**重建成可读的能流表达式**——串联触点用 `·`、并联用 `+`、常闭显示 `/操作数`；线圈 `( )/(S)/(R)`、MOVE/比较/定时器盒带管脚操作数；SCL/STL 网络内联成代码。**关键**：自动标注接到字面常量的触点——`⟨恒断·禁用本行⟩`(常开触点接 FALSE=永久断开、静默禁用整行，肉眼几乎看不出)、`⟨恒通⟩`(恒导通旁路)。比导出 FlgNet XML 手工追线又快又准。
+  - 实证：对 5T车 原生 `Auto_SpeedSet`(LAD+SCL+STL 混编)一眼标出"初始化切换"里被恒 FALSE 触点禁用的 `0006/0007` 握手行(`TP(..).Q · 0 ⟨恒断·禁用本行⟩`)——正是之前手工追半天才发现的坑；复位行 `MOVE 16#04FE` 无禁用标记=有效。端到端(测试PLC/FC_Alarm)输出 `"DemoData.HighAlarm" ( ) ⇐ ("DemoData.Temp" >= "DemoData.Limit")`。
+  - ServerInstructions 与 GetAuthoringGuide('lad') 补指引：**读 LAD 用 DescribeBlockLogic，别手解 XML**。
+- 纯只读、Siemens-free 渲染器(`LadTextRenderer`)，工具数 200→201。V20/V21 双编译 0 错，渲染器离线对真实块 + 端到端各验证一遍。
+
 ## [2.2.9] - 2026-07-04 - 文档导入健壮化：嵌套组不再失败/丢块号 + 真实错误上抛 + 导出失败原因可见
 
 真机排障中暴露的 SIMATIC SD 文档导入/导出缺陷，均在活工程(5T车)+测试PLC 实测修复：
