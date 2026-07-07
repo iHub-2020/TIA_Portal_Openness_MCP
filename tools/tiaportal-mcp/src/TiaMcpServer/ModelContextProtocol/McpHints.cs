@@ -53,6 +53,14 @@ namespace TiaMcpServer.ModelContextProtocol
             if (Has(m, "know-how") || Has(m, "knowhow") || Has(m, "protected"))
                 return Tip("the block is know-how protected and cannot be read/exported via Openness; unprotect it in the TIA UI.");
 
+            // download blocked because an interface/static-var change needs the CPU stopped
+            if (Has(m, "stopmodules") || (Has(m, "download") && Has(m, "unhandled")))
+                return Tip("the change alters a block interface (e.g. a new static VAR -> instance DB rebuild), so a RUN download is refused. Call DownloadToPlc(stopBeforeDownload=true) for a brief stop-download, or do 'download software (changes only)' in the TIA UI to stay in RUN.");
+
+            // export refused because the software/block is inconsistent
+            if (Has(m, "not consistent") || Has(m, "inconsistent") || Has(m, "isconsistent"))
+                return Tip("the block/software is inconsistent and cannot be exported — call CompileSoftware first to make it consistent, then retry the export.");
+
             return "";
         }
 
