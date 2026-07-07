@@ -47,7 +47,9 @@ Connect → (OpenProject | AttachToOpenProject | CreateProject) → GetProjectTr
 - PlcBuildAndImport: batch-import block set with compileAfter; also supports dryRun.
 - softwarePath is the PLC SOFTWARE name (e.g. '5T车', 'PLC_1'), NOT the device/station name. When rejected, GetProjectTree shows the real one; fuzzy matching exists but exact is faster.
 - Openness export does not work while online: tools auto GoOffline where safe; if you see 'not supported in online mode', call GoOffline(softwarePath) and retry.
-- Cold start is slow (TIA launch). If many operations are planned, keep one session; do not Disconnect between calls.",
+- Cold start is slow (TIA launch). If many operations are planned, keep one session; do not Disconnect between calls.
+- .s7dcl block/network TITLES cannot inline Chinese: S7_NetworkTitle / S7_BlockTitle := ""中文"" imports silently as zero blocks ('importedBlocks:0' or 'Failed importing'). Keep the header ASCII (Chinese inside SCL body comments is fine); put a Chinese title in a .s7res MLC reference instead.
+- Verify a change actually LANDED by the block's ModifiedDate (= today), NOT by 'compiled with 0 errors' — an old block body plus a freshly imported tag table still compiles clean, so 0 errors does not prove your new logic is in.",
 
             ["scl"] =
 @"SCL AUTHORING (verified):
@@ -77,6 +79,9 @@ Rules that prevent 90% of compile errors:
 - Literals: TRUE/FALSE, 16#00FF (hex), T#500ms (time), 'text' (string).
 - Declare EVERY variable in a VAR section before use; give explicit datatypes.
 - FC with return: FUNCTION ""FC_Name"" : Bool ... assign #FC_Name := ...;
+- S7-1200 TIME from an Int number of seconds: '#n * T#1S' fails ('Operator * not compatible with Int and Time'). Use PT := DINT_TO_TIME(INT_TO_DINT(#sec) * 1000).
+- Do NOT put OB1 in a .scl external source (ORGANIZATION_BLOCK ""Main""): it collides with the CPU's auto-generated OB1 and the WHOLE source rolls back atomically — even FBs that report 'compiled' do not land. Author OB1 calls separately.
+- A comment placed BEFORE the FUNCTION_BLOCK / FUNCTION header is discarded (treated as a file-level comment). Put block comments you need to keep AFTER BEGIN, inside the block body.
 - After import always CompileSoftware and read the diagnostics; fix and re-import the SAME block name (it overwrites).",
 
             ["lad"] =
@@ -107,7 +112,8 @@ Order matters: create/complete the PLC side FIRST (tags/DB must exist), then HMI
 - Screens: EnsureUnifiedHmiScreen + EnsureUnifiedHmiScreenItem, or ApplyUnifiedHmiScreenDesignJson with a design JSON (only use schema keys you have seen in BuildUnifiedHmiLayoutDesignJson output — invented keys are silently ignored or rejected).
 - Buttons: EnsureUnifiedHmiButtonAction / EnsureUnifiedHmiButtonEventHandler for press handlers.
 - HMI software path is usually 'HMI_RT_1'; ScaffoldProject auto-resolves it.
-- These tools verify after write (AbsoluteVerified in the response) — check it instead of re-reading.",
+- These tools verify after write (AbsoluteVerified in the response) — check it instead of re-reading.
+- CLASSIC/Comfort/Basic panels (KTP Basic, TP/KTP Comfort) CANNOT get their PLC connection created via Openness on this build (CommunicationConnections is not exposed). Prefer a WinCC Unified panel. If a classic panel is mandatory, the only automatable path is to import the HMI TAG TABLE with ABSOLUTE addressing: AddressAccessMode=Absolute, LogicalAddress=%DB1.DBX36.0 + the Connection name, and NO ControllerTag (a symbolic tag on a connection with no integrated partner resolves to 'controller tag not found'). The source DB must be non-optimized.",
 
             ["errors"] =
 @"COMMON ERRORS → EXACT FIX (all seen on real machines):
@@ -117,6 +123,9 @@ Order matters: create/complete the PLC side FIRST (tags/DB must exist), then HMI
 - 'not supported in online mode' → GoOffline(softwarePath), retry the export/import.
 - 'PLC_1 NotFound' → softwarePath must be the PLC software name from GetProjectTree, not 'PLC_1' guessed, not the station name.
 - Compile errors after import → CompileAndDiagnosePlc returns structured diagnostics; fix the source text and re-import the same block (overwrite), do not create renamed copies.
+- 'EngineeringObjectDisposedException' / handle disposed → the software handle went stale (you switched project, or the TIA UI opened the project). Re-bind with AttachToOpenProject / GetProjectTree BEFORE the write, then retry — do not keep reusing the old handle.
+- 'AddDevice' fails / device not found with a stray '/V' in the type name → the version argument was empty (it built 'orderNo/V'). Call SearchHardwareCatalog first and pass the exact version (e.g. 'V4.7').
+- S7-1200 'identityConfirmed:false' right after connect is NORMAL, not an error — proceed.
 - Connect hangs / security error → an orphan TIA process is stuck; ask the user to close TIA instances (or kill Siemens.Automation.Portal.exe) and retry.
 - Long waits are normal on FIRST launch only (headless TIA cold start); subsequent calls are fast. Never spam-retry a slow call — you will spawn extra TIA instances.",
         };
